@@ -1,0 +1,50 @@
+# Default rule set
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+  - file_length
+  - type_body_length
+  - function_body_length
+  - large_tuple
+  - statement_position
+
+opt_in_rules:
+  - empty_count
+  - closure_spacing
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - private_outlet
+  - sorted_first_last
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+
+excluded:
+  - .build
+  - DerivedData
+  - Packages
+  - WarehouseOS
+
+identifier_name:
+  min_length:
+    warning: 2
+  max_length:
+    warning: 60
+  excluded:
+    - id
+    - i
+    - x
+    - y
+
+type_name:
+  min_length:
+    warning: 3
+  max_length:
+    warning: 50
+
+nesting:
+  type_level:
+    warning: 3
+  function_level:
+    warning: 5
+
+reporter: "xcode"

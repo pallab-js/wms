@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "lineLength": 100,
+  "indentation": {
+    "spaces": 4"
+  },
+  "lineBreakBeforeControlFlowKeywords": true,
+  "lineBreakBeforeEachArgument": false,
+  "lineBreakBeforeEachGenericRequirement": false,
+  "lineBreakBetweenDeclarationAttributes": false,
+  "prioritizeKeepingFunctionOutputTogether": true,
+  "respectsExistingLineBreaks": true,
+  "rules": {
+    "AllPublicDeclarationsHaveDocumentation": false,
+    "AlwaysUseLiteralForEmptyCollectionInit": true,
+    "AlwaysUseLowerCamelCase": true,
+    "AlwaysUseShorthandTypeNames": true,
+    "AlwaysUseSingleLineStringInterpolation": true,
+    "AlwaysUseSingleLineWhere": false,
+    "AlwaysUseTrailingCommas": true,
+    "AnonymousArgumentInMultilineClosure": true,
+    "DoNotUseSemicolons": true,
+    "NoAccessLevelOnExtensionDeclaration": true,
+    "OrderedImports": true,
+    "UseLetInEveryBoundCaseVariable": true,
+    "UseShorthandTypeNames": true
+  }
+}
