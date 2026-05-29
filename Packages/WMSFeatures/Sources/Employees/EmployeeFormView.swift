@@ -15,11 +15,32 @@ public struct EmployeeFormView: View {
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    @State private var validationErrors: [String] = []
+
     public var body: some View {
         VStack(spacing: 20) {
             Text(title)
                 .font(.wmsTitle)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !validationErrors.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(validationErrors, id: \.self) { error in
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(.wmsDestructive)
+                                .font(.caption)
+                            Text(error)
+                                .font(.wmsCaption)
+                                .foregroundColor(.wmsDestructive)
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.wmsDestructive.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
 
             Form {
                 TextField("First Name", text: $firstName)
@@ -46,15 +67,30 @@ public struct EmployeeFormView: View {
 
             HStack {
                 Spacer()
-                Button("Cancel", role: .cancel) { onCancel() }
-                    .accessibilityLabel("Cancel employee form")
-                Button("Save") { onSave() }
-                    .disabled(firstName.isEmpty || lastName.isEmpty || employeeCode.isEmpty || email.isEmpty)
-                    .accessibilityLabel("Save employee")
-                    .accessibilityHint(firstName.isEmpty || lastName.isEmpty ? "First and last name are required" : "Double tap to save")
+                Button("Cancel", role: .cancel) {
+                    validationErrors = []
+                    onCancel()
+                }
+                .accessibilityLabel("Cancel employee form")
+                .keyboardShortcut(.escape)
+                Button("Save") {
+                    let result = InputValidator.validateEmployeeForm(
+                        firstName: firstName, lastName: lastName,
+                        employeeCode: employeeCode, email: email
+                    )
+                    if result.isValid {
+                        validationErrors = []
+                        onSave()
+                    } else {
+                        validationErrors = result.errors
+                    }
+                }
+                .disabled(firstName.isEmpty || lastName.isEmpty || employeeCode.isEmpty || email.isEmpty)
+                .accessibilityLabel("Save employee")
+                .accessibilityHint(firstName.isEmpty || lastName.isEmpty ? "First and last name are required" : "Double tap to save")
             }
         }
         .padding()
-        .frame(width: 420, height: 480)
+        .frame(width: 420, height: 520)
     }
 }

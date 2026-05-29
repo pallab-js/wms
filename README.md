@@ -80,8 +80,8 @@ swift build
 # Run
 swift run WarehouseOS
 
-# Run integration tests
-swift run TestRunner
+# Test
+swift test
 
 # Lint
 swiftlint --strict

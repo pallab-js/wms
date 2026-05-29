@@ -4,7 +4,18 @@ import WMSDesignSystem
 
 public struct WarehouseDetailView: View {
     let warehouse: Warehouse
-    let onEdit: () -> Void
+    let onSave: (Warehouse) -> Void
+
+    @State private var showEditSheet = false
+    @State private var editName = ""
+    @State private var editCode = ""
+    @State private var editAddress = ""
+    @State private var editCapacity = ""
+
+    public init(warehouse: Warehouse, onSave: @escaping (Warehouse) -> Void) {
+        self.warehouse = warehouse
+        self.onSave = onSave
+    }
 
     public var body: some View {
         ScrollView {
@@ -19,7 +30,11 @@ public struct WarehouseDetailView: View {
                     }
                     Spacer()
                     Button("Edit") {
-                        onEdit()
+                        editName = warehouse.name
+                        editCode = warehouse.code
+                        editAddress = warehouse.address
+                        editCapacity = "\(warehouse.capacity)"
+                        showEditSheet = true
                     }
                 }
 
@@ -50,6 +65,11 @@ public struct WarehouseDetailView: View {
                                 .foregroundColor(.wmsTextSecondary)
                             Text(warehouse.createdAt.formatted(date: .abbreviated, time: .shortened))
                         }
+                        GridRow {
+                            Text("Updated")
+                                .foregroundColor(.wmsTextSecondary)
+                            Text(warehouse.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                        }
                     }
                     .padding(.vertical, 4)
                 }
@@ -57,5 +77,36 @@ public struct WarehouseDetailView: View {
             .padding()
         }
         .navigationTitle(warehouse.name)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") {
+                    editName = warehouse.name
+                    editCode = warehouse.code
+                    editAddress = warehouse.address
+                    editCapacity = "\(warehouse.capacity)"
+                    showEditSheet = true
+                }
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            WarehouseFormView(
+                title: "Edit Warehouse",
+                name: $editName,
+                code: $editCode,
+                address: $editAddress,
+                capacity: $editCapacity,
+                onSave: {
+                    var updated = warehouse
+                    updated.name = editName
+                    updated.code = editCode
+                    updated.address = editAddress
+                    updated.capacity = Int(editCapacity) ?? 0
+                    updated.updatedAt = Date()
+                    onSave(updated)
+                    showEditSheet = false
+                },
+                onCancel: { showEditSheet = false }
+            )
+        }
     }
 }

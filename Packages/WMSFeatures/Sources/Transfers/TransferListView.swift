@@ -67,6 +67,7 @@ public struct TransferListView: View {
                 } label: {
                     Label("New Transfer", systemImage: "plus")
                 }
+                .keyboardShortcut("n")
                 .disabled(warehouses.count < 2)
             }
         }

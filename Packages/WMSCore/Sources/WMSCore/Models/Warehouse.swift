@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Warehouse: Identifiable, Equatable, Codable, Sendable {
+public struct Warehouse: Identifiable, Equatable, Hashable, Codable, Sendable {
     public let id: UUID
     public var name: String
     public var code: String

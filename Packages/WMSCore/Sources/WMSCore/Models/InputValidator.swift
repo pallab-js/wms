@@ -113,4 +113,20 @@ public struct InputValidator {
 
         return ValidationResult(isValid: errors.isEmpty, errors: errors)
     }
+
+    /// Throwing wrappers for service-layer use
+    public static func requireNotEmpty(_ value: String, field: String) throws {
+        let result = validateNotEmpty(value, field: field)
+        if !result.isValid {
+            throw WMSError.validationError(result.errors.joined(separator: ", "))
+        }
+    }
+
+    public static func requirePositiveInt(_ value: String, field: String) throws -> Int {
+        let result = validatePositiveInt(value, field: field)
+        if !result.isValid {
+            throw WMSError.validationError(result.errors.joined(separator: ", "))
+        }
+        return Int(value)!
+    }
 }

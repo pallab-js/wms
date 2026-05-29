@@ -13,6 +13,8 @@ public struct WarehouseListView: View {
     @State private var newCode = ""
     @State private var newAddress = ""
     @State private var newCapacity = ""
+    @State private var showSuccessToast = false
+    @State private var successMessage = ""
 
     public init(viewModel: WarehouseListViewModel) {
         self.viewModel = viewModel
@@ -29,19 +31,25 @@ public struct WarehouseListView: View {
                     description: Text("Add your first warehouse to get started.")
                 )
             } else {
-                List(viewModel.warehouses, selection: $viewModel.selectedWarehouseID) { warehouse in
-                    WarehouseRowView(warehouse: warehouse)
-                        .tag(warehouse.id)
-                        .contextMenu {
-                            Button("Edit") { beginEditing(warehouse) }
-                            Divider()
-                            Button("Delete", role: .destructive) {
-                                warehouseToDelete = warehouse
-                                showDeleteConfirmation = true
-                            }
+                List(viewModel.warehouses) { warehouse in
+                    NavigationLink(value: warehouse) {
+                        WarehouseRowView(warehouse: warehouse)
+                    }
+                    .contextMenu {
+                        Button("Edit") { beginEditing(warehouse) }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            warehouseToDelete = warehouse
+                            showDeleteConfirmation = true
                         }
+                    }
                 }
                 .listStyle(.sidebar)
+                .navigationDestination(for: Warehouse.self) { warehouse in
+                    WarehouseDetailView(warehouse: warehouse) { updated in
+                        Task { await viewModel.updateWarehouse(updated) }
+                    }
+                }
             }
         }
         .toolbar {
@@ -51,6 +59,7 @@ public struct WarehouseListView: View {
                     showCreateSheet = true
                 } label: {
                     Label("Add Warehouse", systemImage: "plus")
+                        .keyboardShortcut("n")
                 }
             }
         }
@@ -68,6 +77,10 @@ public struct WarehouseListView: View {
                             address: newAddress, capacity: Int(newCapacity) ?? 0
                         )
                         showCreateSheet = false
+                        if viewModel.errorMessage == nil {
+                            successMessage = "Warehouse created"
+                            showSuccessToast = true
+                        }
                     }
                 },
                 onCancel: { showCreateSheet = false }
@@ -90,6 +103,10 @@ public struct WarehouseListView: View {
                         updated.updatedAt = Date()
                         await viewModel.updateWarehouse(updated)
                         editingWarehouse = nil
+                        if viewModel.errorMessage == nil {
+                            successMessage = "Warehouse updated"
+                            showSuccessToast = true
+                        }
                     }
                 },
                 onCancel: { editingWarehouse = nil }
@@ -113,6 +130,7 @@ public struct WarehouseListView: View {
                 .padding()
             }
         }
+        .wmsToast(isPresented: $showSuccessToast, message: successMessage)
     }
 
     private func beginEditing(_ warehouse: Warehouse) {

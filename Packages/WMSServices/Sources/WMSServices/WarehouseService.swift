@@ -4,12 +4,15 @@ import WMSCore
 public final class WarehouseService: Sendable {
     private let repository: any WarehouseRepository
     private let auditLogger: any AuditLogging
+    private let inventoryService: InventoryService?
 
     public init(
         repository: any WarehouseRepository,
+        inventoryService: InventoryService? = nil,
         auditLogger: any AuditLogging = NullAuditLogger()
     ) {
         self.repository = repository
+        self.inventoryService = inventoryService
         self.auditLogger = auditLogger
     }
 
@@ -30,8 +33,8 @@ public final class WarehouseService: Sendable {
         address: String,
         capacity: Int
     ) async throws -> Warehouse {
-        try validateNotEmpty(name, field: "Name")
-        try validateNotEmpty(code, field: "Code")
+        try InputValidator.requireNotEmpty(name, field: "Name")
+        try InputValidator.requireNotEmpty(code, field: "Code")
         guard capacity > 0 else {
             throw WMSError.validationError("Capacity must be greater than zero.")
         }
@@ -53,11 +56,14 @@ public final class WarehouseService: Sendable {
     }
 
     public func updateWarehouse(_ warehouse: Warehouse) async throws {
-        try validateNotEmpty(warehouse.name, field: "Name")
+        try InputValidator.requireNotEmpty(warehouse.name, field: "Name")
         guard warehouse.capacity > 0 else {
             throw WMSError.validationError("Capacity must be greater than zero.")
         }
         var updated = warehouse
+        updated.name = warehouse.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.code = warehouse.code.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.address = warehouse.address.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.updatedAt = Date()
         try await repository.save(updated)
         await auditLogger.log(entityType: "Warehouse", entityID: warehouse.id, action: "updated")
@@ -72,19 +78,15 @@ public final class WarehouseService: Sendable {
     }
 
     public func deleteWarehouse(id: UUID) async throws {
+        let inventoryCount = try await inventoryService?.getItemsCount(forWarehouseID: id) ?? 0
+        guard inventoryCount == 0 else {
+            throw WMSError.validationError("Cannot delete warehouse with \(inventoryCount) inventory item(s). Remove or reassign items first.")
+        }
         try await repository.delete(id: id)
         await auditLogger.log(entityType: "Warehouse", entityID: id, action: "deleted")
     }
 
     public func getTotalWarehouseCount() async throws -> Int {
         try await repository.fetchAll().filter(\.isActive).count
-    }
-}
-
-private extension WarehouseService {
-    func validateNotEmpty(_ value: String, field: String) throws {
-        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw WMSError.validationError("\(field) cannot be empty.")
-        }
     }
 }

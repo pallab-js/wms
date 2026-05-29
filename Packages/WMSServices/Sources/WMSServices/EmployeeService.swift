@@ -38,10 +38,10 @@ public final class EmployeeService: Sendable {
         hireDate: Date,
         notes: String
     ) async throws -> Employee {
-        try validateNotEmpty(firstName, field: "First name")
-        try validateNotEmpty(lastName, field: "Last name")
-        try validateNotEmpty(employeeCode, field: "Employee code")
-        try validateNotEmpty(email, field: "Email")
+        try InputValidator.requireNotEmpty(firstName, field: "First name")
+        try InputValidator.requireNotEmpty(lastName, field: "Last name")
+        try InputValidator.requireNotEmpty(employeeCode, field: "Employee code")
+        try InputValidator.requireNotEmpty(email, field: "Email")
 
         let existing = try await repository.fetchAll()
         guard !existing.contains(where: { $0.employeeCode.lowercased() == employeeCode.lowercased() }) else {
@@ -64,9 +64,13 @@ public final class EmployeeService: Sendable {
     }
 
     public func updateEmployee(_ employee: Employee) async throws {
-        try validateNotEmpty(employee.firstName, field: "First name")
-        try validateNotEmpty(employee.lastName, field: "Last name")
-        try await repository.save(employee)
+        try InputValidator.requireNotEmpty(employee.firstName, field: "First name")
+        var updated = employee
+        updated.firstName = employee.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.lastName = employee.lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.employeeCode = employee.employeeCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.email = employee.email.trimmingCharacters(in: .whitespacesAndNewlines)
+        try await repository.save(updated)
         await auditLogger.log(entityType: "Employee", entityID: employee.id, action: "updated")
     }
 
@@ -80,13 +84,5 @@ public final class EmployeeService: Sendable {
     public func deleteEmployee(id: UUID) async throws {
         try await repository.delete(id: id)
         await auditLogger.log(entityType: "Employee", entityID: id, action: "deleted")
-    }
-}
-
-private extension EmployeeService {
-    func validateNotEmpty(_ value: String, field: String) throws {
-        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw WMSError.validationError("\(field) cannot be empty.")
-        }
     }
 }

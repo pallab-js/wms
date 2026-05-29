@@ -4,10 +4,10 @@ import WMSDesignSystem
 import WMSServices
 
 public struct AuditLogView: View {
-    @State private var viewModel: AuditLogViewModel
+    @State var viewModel: AuditLogViewModel
 
-    public init(auditService: AuditLogService) {
-        _viewModel = State(initialValue: AuditLogViewModel(service: auditService))
+    public init(viewModel: AuditLogViewModel) {
+        self.viewModel = viewModel
     }
 
     public var body: some View {
@@ -96,8 +96,8 @@ private struct AuditLogRow: View {
 
             Spacer()
 
-            Text(entry.timestamp.formatted(date: .abbreviated, time: .shortened))
-                .font(.wmsCaption)
+            Text(formattedTimestamp(entry.timestamp))
+                .font(.wmsMonospaceCaption)
                 .foregroundColor(.wmsTextTertiary)
         }
         .padding(.vertical, 4)
@@ -121,5 +121,14 @@ private struct AuditLogRow: View {
         case "deleted", "deactivated": return .wmsDestructive
         default: return .wmsTextSecondary
         }
+    }
+
+    private func formattedTimestamp(_ date: Date) -> String {
+        let elapsed = -date.timeIntervalSinceNow
+        if elapsed < 60 { return "just now" }
+        if elapsed < 3600 { return "\(Int(elapsed / 60))m ago" }
+        if elapsed < 86400 { return "\(Int(elapsed / 3600))h ago" }
+        if elapsed < 604800 { return "\(Int(elapsed / 86400))d ago" }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 }

@@ -46,14 +46,15 @@ final class DependencyContainer {
         self.auditLogService = AuditLogService(repository: auditRepository)
         self.inventoryAlertService = InventoryAlertService(alertRepository: alertRepository)
 
-        self.warehouseService = WarehouseService(
-            repository: warehouseRepository,
-            auditLogger: auditLogger
-        )
         self.inventoryService = InventoryService(
             itemRepository: inventoryItemRepository,
             movementRepository: stockMovementRepository,
             alertService: inventoryAlertService,
+            auditLogger: auditLogger
+        )
+        self.warehouseService = WarehouseService(
+            repository: warehouseRepository,
+            inventoryService: inventoryService,
             auditLogger: auditLogger
         )
         self.employeeService = EmployeeService(
@@ -73,6 +74,11 @@ final class DependencyContainer {
             inventoryService: inventoryService,
             movementService: stockMovementService
         )
-        self.settingsViewModel = SettingsViewModel()
+        self.settingsViewModel = SettingsViewModel(
+            onRoleChanged: { [weak auditLogger] role in
+                auditLogger?.currentUserRole = role.rawValue
+            }
+        )
+        auditLogger.currentUserRole = settingsViewModel.currentUserRole.rawValue
     }
 }

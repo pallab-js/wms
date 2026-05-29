@@ -3,20 +3,20 @@ import WMSCore
 import WMSDesignSystem
 import WMSServices
 
-public struct GlobalSearchView: View {
-    @State private var viewModel: GlobalSearchViewModel
-    @Environment(\.dismiss) private var dismiss
+public enum SearchNavigationTarget: String, CaseIterable {
+    case warehouses
+    case inventory
+    case employees
+}
 
-    public init(
-        warehouseService: WarehouseService,
-        inventoryService: InventoryService,
-        employeeService: EmployeeService
-    ) {
-        _viewModel = State(initialValue: GlobalSearchViewModel(
-            warehouseService: warehouseService,
-            inventoryService: inventoryService,
-            employeeService: employeeService
-        ))
+public struct GlobalSearchView: View {
+    @State var viewModel: GlobalSearchViewModel
+    @Environment(\.dismiss) private var dismiss
+    let onNavigate: (SearchNavigationTarget) -> Void
+
+    public init(viewModel: GlobalSearchViewModel, onNavigate: @escaping (SearchNavigationTarget) -> Void) {
+        self.viewModel = viewModel
+        self.onNavigate = onNavigate
     }
 
     public var body: some View {
@@ -58,6 +58,10 @@ public struct GlobalSearchView: View {
                                     subtitle: warehouse.code,
                                     detail: warehouse.address
                                 )
+                                .onTapGesture {
+                                    onNavigate(.warehouses)
+                                    dismiss()
+                                }
                             }
                         }
                     }
@@ -70,6 +74,10 @@ public struct GlobalSearchView: View {
                                     subtitle: item.sku,
                                     detail: "\(item.currentQuantity) \(item.unitOfMeasure)"
                                 )
+                                .onTapGesture {
+                                    onNavigate(.inventory)
+                                    dismiss()
+                                }
                             }
                         }
                     }
@@ -82,6 +90,10 @@ public struct GlobalSearchView: View {
                                     subtitle: employee.employeeCode,
                                     detail: employee.jobTitle
                                 )
+                                .onTapGesture {
+                                    onNavigate(.employees)
+                                    dismiss()
+                                }
                             }
                         }
                     }

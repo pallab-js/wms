@@ -21,6 +21,8 @@ public struct InventoryListView: View {
     @State private var minimumThreshold = ""
     @State private var unitCost = ""
     @State private var selectedWarehouseID: UUID?
+    @State private var showSuccessToast = false
+    @State private var successMessage = ""
 
     public init(viewModel: InventoryListViewModel, warehouses: Binding<[Warehouse]>) {
         self.viewModel = viewModel
@@ -100,6 +102,7 @@ public struct InventoryListView: View {
                 } label: {
                     Label("Add Item", systemImage: "plus")
                 }
+                .keyboardShortcut("n")
                 .disabled(warehouses.isEmpty)
             }
         }
@@ -122,6 +125,10 @@ public struct InventoryListView: View {
                             warehouseID: selectedWarehouseID ?? warehouses.first?.id ?? UUID()
                         )
                         showCreateSheet = false
+                        if viewModel.errorMessage == nil {
+                            successMessage = "Item created"
+                            showSuccessToast = true
+                        }
                     }
                 },
                 onCancel: { showCreateSheet = false }
@@ -150,6 +157,10 @@ public struct InventoryListView: View {
                         updated.updatedAt = Date()
                         await viewModel.updateItem(updated)
                         editingItem = nil
+                        if viewModel.errorMessage == nil {
+                            successMessage = "Item updated"
+                            showSuccessToast = true
+                        }
                     }
                 },
                 onCancel: { editingItem = nil }
@@ -176,6 +187,7 @@ public struct InventoryListView: View {
                 .padding()
             }
         }
+        .wmsToast(isPresented: $showSuccessToast, message: successMessage)
     }
 
     private func beginEditing(_ item: InventoryItem) {

@@ -23,6 +23,10 @@ public final class InventoryService: Sendable {
         try await itemRepository.fetchAll(forWarehouseID: warehouseID)
     }
 
+    public func getItemsCount(forWarehouseID warehouseID: UUID) async throws -> Int {
+        try await itemRepository.fetchAll(forWarehouseID: warehouseID).count
+    }
+
     public func getItem(byID id: UUID) async throws -> InventoryItem {
         guard let item = try await itemRepository.fetch(byID: id) else {
             throw WMSError.inventoryItemNotFound
@@ -41,8 +45,8 @@ public final class InventoryService: Sendable {
         unitCost: Double,
         warehouseID: UUID
     ) async throws -> InventoryItem {
-        try validateNotEmpty(sku, field: "SKU")
-        try validateNotEmpty(name, field: "Name")
+        try InputValidator.requireNotEmpty(sku, field: "SKU")
+        try InputValidator.requireNotEmpty(name, field: "Name")
 
         let existing = try await itemRepository.fetch(bySKU: sku, inWarehouseID: warehouseID)
         if existing != nil {
@@ -66,8 +70,10 @@ public final class InventoryService: Sendable {
     }
 
     public func updateItem(_ item: InventoryItem) async throws {
-        try validateNotEmpty(item.sku, field: "SKU")
+        try InputValidator.requireNotEmpty(item.sku, field: "SKU")
         var updated = item
+        updated.sku = item.sku.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.name = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.updatedAt = Date()
         try await itemRepository.save(updated)
         await auditLogger.log(entityType: "InventoryItem", entityID: item.id, action: "updated")
@@ -101,8 +107,10 @@ public final class InventoryService: Sendable {
                 )
             }
             item.currentQuantity -= quantity
-        case .stockIn, .adjustment:
+        case .stockIn:
             item.currentQuantity += quantity
+        case .adjustment:
+            item.currentQuantity = quantity
         }
 
         item.updatedAt = Date()
@@ -139,13 +147,5 @@ public final class InventoryService: Sendable {
     public func getTotalInventoryValue() async throws -> Double {
         let items = try await itemRepository.fetchAll(forWarehouseID: nil)
         return items.reduce(0.0) { $0 + (Double($1.currentQuantity) * $1.unitCost) }
-    }
-}
-
-private extension InventoryService {
-    func validateNotEmpty(_ value: String, field: String) throws {
-        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw WMSError.validationError("\(field) cannot be empty.")
-        }
     }
 }

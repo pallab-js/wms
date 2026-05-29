@@ -21,7 +21,7 @@ public struct TransferFormView: View {
 
     private var sourceWarehouseItems: [InventoryItem] {
         guard let sourceID = sourceWarehouseID else { return [] }
-        return inventoryItems.filter { $0.warehouseID == sourceID && $0.currentQuantity > 0 }
+        return inventoryItems.filter { $0.warehouseID == sourceID }
     }
 
     public var body: some View {

@@ -92,6 +92,7 @@ public final class TransferService: Sendable {
             throw WMSError.invalidTransferState(from: order.status.rawValue, to: "inTransit")
         }
 
+        var updatedItems: [InventoryItem] = []
         for i in 0..<order.lineItems.count {
             let lineItem = order.lineItems[i]
             guard var item = try await itemRepository.fetch(byID: lineItem.inventoryItemID) else {
@@ -106,10 +107,11 @@ public final class TransferService: Sendable {
             }
             item.currentQuantity -= lineItem.requestedQuantity
             item.updatedAt = Date()
-            try await itemRepository.save(item)
+            updatedItems.append(item)
             order.lineItems[i].transferredQuantity = lineItem.requestedQuantity
         }
 
+        try await itemRepository.saveAll(updatedItems)
         order.status = .inTransit
         try await transferRepository.save(order)
         await auditLogger.log(entityType: "TransferOrder", entityID: id, action: "executed")
@@ -121,6 +123,7 @@ public final class TransferService: Sendable {
             throw WMSError.invalidTransferState(from: order.status.rawValue, to: "completed")
         }
 
+        var updatedItems: [InventoryItem] = []
         for lineItem in order.lineItems {
             guard lineItem.transferredQuantity > 0 else {
                 throw WMSError.validationError(
@@ -130,11 +133,17 @@ public final class TransferService: Sendable {
             guard var item = try await itemRepository.fetch(byID: lineItem.inventoryItemID) else {
                 throw WMSError.inventoryItemNotFound
             }
+            guard item.warehouseID == order.destinationWarehouseID else {
+                throw WMSError.validationError(
+                    "Item '\(item.name)' is not assigned to the destination warehouse."
+                )
+            }
             item.currentQuantity += lineItem.transferredQuantity
             item.updatedAt = Date()
-            try await itemRepository.save(item)
+            updatedItems.append(item)
         }
 
+        try await itemRepository.saveAll(updatedItems)
         order.status = .completed
         order.completedDate = Date()
         try await transferRepository.save(order)

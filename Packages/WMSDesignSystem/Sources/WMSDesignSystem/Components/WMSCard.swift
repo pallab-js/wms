@@ -12,9 +12,10 @@ public struct WMSCard<Content: View>: View {
             .padding()
             .background(Color.wmsSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+            .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.wmsSeparator, lineWidth: 1)
+                    .stroke(Color.wmsSeparator.opacity(0.5), lineWidth: 1)
             )
     }
 }
@@ -88,6 +89,34 @@ public struct WMSErrorBanner: View {
     }
 }
 
+public struct WMSToast: View {
+    let message: String
+    let icon: String
+    let color: Color
+
+    public init(message: String, icon: String = "checkmark.circle.fill", color: Color = .wmsSuccess) {
+        self.message = message
+        self.icon = icon
+        self.color = color
+    }
+
+    public var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+            Text(message)
+                .font(.wmsCallout)
+                .foregroundColor(.wmsTextPrimary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+}
+
 public struct WMSLoadingView: View {
     let message: String
 
@@ -103,6 +132,23 @@ public struct WMSLoadingView: View {
                 .foregroundColor(.wmsTextSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+public extension View {
+    func wmsToast(isPresented: Binding<Bool>, message: String, icon: String = "checkmark.circle.fill", color: Color = .wmsSuccess) -> some View {
+        self.overlay(alignment: .top) {
+            if isPresented.wrappedValue {
+                WMSToast(message: message, icon: icon, color: color)
+                    .padding(.top, 8)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            withAnimation { isPresented.wrappedValue = false }
+                        }
+                    }
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: isPresented.wrappedValue)
     }
 }
 

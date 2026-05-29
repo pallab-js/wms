@@ -14,13 +14,19 @@ public extension AuditLogging {
     }
 }
 
-public final class AuditLogger: AuditLogging {
+public final class AuditLogger: @unchecked Sendable, AuditLogging {
     private let repository: any AuditRepository
-    private let userRole: String
+    private let userRoleLock = OSAllocatedUnfairLock()
+    private var _currentUserRole: String = "Administrator"
+
+    public var currentUserRole: String {
+        get { userRoleLock.withLock { _currentUserRole } }
+        set { userRoleLock.withLock { _currentUserRole = newValue } }
+    }
 
     public init(repository: any AuditRepository, userRole: String = "Administrator") {
         self.repository = repository
-        self.userRole = userRole
+        self._currentUserRole = userRole
     }
 
     public func log(entityType: String, entityID: UUID, action: String, note: String? = nil) async {
@@ -28,7 +34,7 @@ public final class AuditLogger: AuditLogging {
             entityType: entityType,
             entityID: entityID,
             action: action,
-            userRole: userRole,
+            userRole: currentUserRole,
             note: note
         )
         do {

@@ -6,10 +6,13 @@ import WMSCore
 public final class SettingsViewModel {
     var organisationName: String = ""
     var defaultUnitOfMeasure: String = "units"
-    var currentUserRole: UserRole = .administrator
+    public var currentUserRole: UserRole = .administrator {
+        didSet { onRoleChanged?(currentUserRole) }
+    }
     var savedMessage: String?
 
     private let userDefaults = UserDefaults.standard
+    private let onRoleChanged: ((UserRole) -> Void)?
 
     private enum Keys {
         static let organisationName = "wms_organisation_name"
@@ -17,7 +20,8 @@ public final class SettingsViewModel {
         static let currentUserRole = "wms_current_user_role"
     }
 
-    public init() {
+    public init(onRoleChanged: ((UserRole) -> Void)? = nil) {
+        self.onRoleChanged = onRoleChanged
         loadSettings()
     }
 

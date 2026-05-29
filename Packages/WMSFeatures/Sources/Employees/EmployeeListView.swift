@@ -18,6 +18,8 @@ public struct EmployeeListView: View {
     @State private var phone = ""
     @State private var hireDate = Date()
     @State private var notes = ""
+    @State private var showSuccessToast = false
+    @State private var successMessage = ""
 
     public init(viewModel: EmployeeListViewModel) {
         self.viewModel = viewModel
@@ -100,6 +102,7 @@ public struct EmployeeListView: View {
                 } label: {
                     Label("Add Employee", systemImage: "plus")
                 }
+                .keyboardShortcut("n")
             }
         }
         .sheet(isPresented: $showCreateSheet) {
@@ -118,6 +121,10 @@ public struct EmployeeListView: View {
                             hireDate: hireDate, notes: notes
                         )
                         showCreateSheet = false
+                        if viewModel.errorMessage == nil {
+                            successMessage = "Employee created"
+                            showSuccessToast = true
+                        }
                     }
                 },
                 onCancel: { showCreateSheet = false }
@@ -143,6 +150,10 @@ public struct EmployeeListView: View {
                         updated.notes = notes
                         await viewModel.updateEmployee(updated)
                         editingEmployee = nil
+                        if viewModel.errorMessage == nil {
+                            successMessage = "Employee updated"
+                            showSuccessToast = true
+                        }
                     }
                 },
                 onCancel: { editingEmployee = nil }
@@ -166,6 +177,7 @@ public struct EmployeeListView: View {
                 .padding()
             }
         }
+        .wmsToast(isPresented: $showSuccessToast, message: successMessage)
     }
 
     private func beginEditing(_ emp: Employee) {

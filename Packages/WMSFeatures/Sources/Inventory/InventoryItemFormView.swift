@@ -17,11 +17,32 @@ public struct InventoryItemFormView: View {
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    @State private var validationErrors: [String] = []
+
     public var body: some View {
         VStack(spacing: 20) {
             Text(title)
                 .font(.wmsTitle)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !validationErrors.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(validationErrors, id: \.self) { error in
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(.wmsDestructive)
+                                .font(.caption)
+                            Text(error)
+                                .font(.wmsCaption)
+                                .foregroundColor(.wmsDestructive)
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.wmsDestructive.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
 
             Form {
                 TextField("SKU", text: $sku)
@@ -64,15 +85,30 @@ public struct InventoryItemFormView: View {
 
             HStack {
                 Spacer()
-                Button("Cancel", role: .cancel) { onCancel() }
-                    .accessibilityLabel("Cancel item form")
-                Button("Save") { onSave() }
-                    .disabled(sku.isEmpty || name.isEmpty || selectedWarehouseID == nil)
-                    .accessibilityLabel("Save inventory item")
-                    .accessibilityHint(sku.isEmpty || name.isEmpty ? "SKU and name are required" : "Double tap to save")
+                Button("Cancel", role: .cancel) {
+                    validationErrors = []
+                    onCancel()
+                }
+                .accessibilityLabel("Cancel item form")
+                .keyboardShortcut(.escape)
+                Button("Save") {
+                    let result = InputValidator.validateInventoryItemForm(
+                        sku: sku, name: name,
+                        quantity: currentQuantity, threshold: minimumThreshold, cost: unitCost
+                    )
+                    if result.isValid {
+                        validationErrors = []
+                        onSave()
+                    } else {
+                        validationErrors = result.errors
+                    }
+                }
+                .disabled(sku.isEmpty || name.isEmpty || selectedWarehouseID == nil)
+                .accessibilityLabel("Save inventory item")
+                .accessibilityHint(sku.isEmpty || name.isEmpty ? "SKU and name are required" : "Double tap to save")
             }
         }
         .padding()
-        .frame(width: 420, height: 520)
+        .frame(width: 420, height: 560)
     }
 }

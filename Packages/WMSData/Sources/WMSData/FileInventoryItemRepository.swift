@@ -52,18 +52,18 @@ public final class FileInventoryItemRepository: InventoryItemRepository {
     }
 
     public func saveWithMovement(_ item: InventoryItem, movement: StockMovement) async throws {
-        try store.atomicWrite {
-            var items: [InventoryItem] = try self.store.load([InventoryItem].self, file: self.file)
+        try store.atomicWrite { store in
+            var items: [InventoryItem] = try store.loadUnsafe([InventoryItem].self, file: self.file)
             if let index = items.firstIndex(where: { $0.id == item.id }) {
                 items[index] = item
             } else {
                 items.append(item)
             }
-            try self.store.save(items, file: self.file)
+            try store.saveUnsafe(items, file: self.file)
 
-            var movements: [StockMovement] = try self.store.load([StockMovement].self, file: self.movementFile)
+            var movements: [StockMovement] = try store.loadUnsafe([StockMovement].self, file: self.movementFile)
             movements.append(movement)
-            try self.store.save(movements, file: self.movementFile)
+            try store.saveUnsafe(movements, file: self.movementFile)
         }
     }
 
@@ -71,5 +71,20 @@ public final class FileInventoryItemRepository: InventoryItemRepository {
         var items: [InventoryItem] = try store.load([InventoryItem].self, file: file)
         items.removeAll { $0.id == id }
         try store.save(items, file: file)
+    }
+
+    public func saveAll(_ items: [InventoryItem]) async throws {
+        try store.atomicWrite { store in
+            let existing: [InventoryItem] = try store.loadUnsafe([InventoryItem].self, file: self.file)
+            var merged = existing
+            for item in items {
+                if let index = merged.firstIndex(where: { $0.id == item.id }) {
+                    merged[index] = item
+                } else {
+                    merged.append(item)
+                }
+            }
+            try store.saveUnsafe(merged, file: self.file)
+        }
     }
 }

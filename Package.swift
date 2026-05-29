@@ -25,6 +25,15 @@ let package = Package(
                 "WMSDesignSystem"
             ],
             path: "Sources/WarehouseOSApp"
+        ),
+        .testTarget(
+            name: "IntegrationTests",
+            dependencies: [
+                "WMSCore",
+                "WMSData",
+                "WMSServices"
+            ],
+            path: "Tests/IntegrationTests"
         )
     ]
 )

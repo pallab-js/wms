@@ -11,9 +11,19 @@ struct ContentView: View {
         @Bindable var router = router
 
         NavigationSplitView {
-            List(AppSection.allCases, selection: $router.selectedSection) { section in
-                Label(section.label, systemImage: section.icon)
-                    .tag(section)
+            List(selection: $router.selectedSection) {
+                Section("Operations") {
+                    ForEach([AppSection.warehouses, .inventory, .employees, .transfers], id: \.self) { section in
+                        Label(section.label, systemImage: section.icon)
+                            .tag(section)
+                    }
+                }
+                Section("Analytics") {
+                    ForEach([AppSection.reports, .auditLog, .settings], id: \.self) { section in
+                        Label(section.label, systemImage: section.icon)
+                            .tag(section)
+                    }
+                }
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 300)
             .navigationTitle("WarehouseOS")
@@ -36,7 +46,7 @@ struct ContentView: View {
             case .reports:
                 DashboardContent(viewModel: DashboardViewModel(service: container.dashboardService))
             case .auditLog:
-                AuditLogContent(auditLogService: container.auditLogService)
+                AuditLogContent(viewModel: AuditLogViewModel(service: container.auditLogService))
             case .settings:
                 SettingsContent(viewModel: container.settingsViewModel)
             case .none:
@@ -50,9 +60,19 @@ struct ContentView: View {
         .frame(minWidth: 900, minHeight: 600)
         .sheet(isPresented: $router.showSearch) {
             GlobalSearchView(
-                warehouseService: container.warehouseService,
-                inventoryService: container.inventoryService,
-                employeeService: container.employeeService
+                viewModel: GlobalSearchViewModel(
+                    warehouseService: container.warehouseService,
+                    inventoryService: container.inventoryService,
+                    employeeService: container.employeeService
+                ),
+                onNavigate: { target in
+                    switch target {
+                    case .warehouses: router.selectedSection = .warehouses
+                    case .inventory: router.selectedSection = .inventory
+                    case .employees: router.selectedSection = .employees
+                    }
+                    router.showSearch = false
+                }
             )
         }
         .toolbar {
@@ -73,8 +93,10 @@ struct WarehouseListContent: View {
     @State var viewModel: WarehouseListViewModel
 
     var body: some View {
-        WarehouseListView(viewModel: viewModel)
-            .task { await viewModel.loadWarehouses() }
+        NavigationStack {
+            WarehouseListView(viewModel: viewModel)
+        }
+        .task { await viewModel.loadWarehouses() }
     }
 }
 
@@ -128,10 +150,11 @@ struct DashboardContent: View {
 }
 
 struct AuditLogContent: View {
-    let auditLogService: AuditLogService
+    @State var viewModel: AuditLogViewModel
 
     var body: some View {
-        AuditLogView(auditService: auditLogService)
+        AuditLogView(viewModel: viewModel)
+            .task { await viewModel.loadEntries() }
     }
 }
 
