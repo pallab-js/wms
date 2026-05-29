@@ -4,13 +4,16 @@ import WMSCore
 public final class EmployeeService: Sendable {
     private let repository: any EmployeeRepository
     private let auditLogger: any AuditLogging
+    private let accessController: any PermissionChecking
 
     public init(
         repository: any EmployeeRepository,
-        auditLogger: any AuditLogging = NullAuditLogger()
+        auditLogger: any AuditLogging = NullAuditLogger(),
+        accessController: any PermissionChecking = NullPermissionChecker()
     ) {
         self.repository = repository
         self.auditLogger = auditLogger
+        self.accessController = accessController
     }
 
     public func getAllEmployees() async throws -> [Employee] {
@@ -38,10 +41,11 @@ public final class EmployeeService: Sendable {
         hireDate: Date,
         notes: String
     ) async throws -> Employee {
+        try accessController.require(.createEmployee)
         try InputValidator.requireNotEmpty(firstName, field: "First name")
         try InputValidator.requireNotEmpty(lastName, field: "Last name")
         try InputValidator.requireNotEmpty(employeeCode, field: "Employee code")
-        try InputValidator.requireNotEmpty(email, field: "Email")
+        try InputValidator.requireValidEmail(email)
 
         let existing = try await repository.fetchAll()
         guard !existing.contains(where: { $0.employeeCode.lowercased() == employeeCode.lowercased() }) else {
@@ -64,6 +68,7 @@ public final class EmployeeService: Sendable {
     }
 
     public func updateEmployee(_ employee: Employee) async throws {
+        try accessController.require(.editEmployee)
         try InputValidator.requireNotEmpty(employee.firstName, field: "First name")
         var updated = employee
         updated.firstName = employee.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -75,6 +80,7 @@ public final class EmployeeService: Sendable {
     }
 
     public func deactivateEmployee(id: UUID) async throws {
+        try accessController.require(.deactivateEmployee)
         var employee = try await getEmployee(byID: id)
         employee.isActive = false
         try await repository.save(employee)
@@ -82,6 +88,7 @@ public final class EmployeeService: Sendable {
     }
 
     public func deleteEmployee(id: UUID) async throws {
+        try accessController.require(.deleteEmployee)
         try await repository.delete(id: id)
         await auditLogger.log(entityType: "Employee", entityID: id, action: "deleted")
     }

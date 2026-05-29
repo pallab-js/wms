@@ -5,15 +5,18 @@ import os
 public final class WMSDataStore: Sendable {
     private let baseURL: URL
     private let lock = OSAllocatedUnfairLock()
+    private let dataProtector: (any DataProtection)?
 
-    public init(baseURL: URL? = nil) {
+    public init(baseURL: URL? = nil, dataProtector: (any DataProtection)? = nil) {
         if let baseURL {
             self.baseURL = baseURL
         } else {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             self.baseURL = appSupport.appendingPathComponent("WarehouseOS", isDirectory: true)
         }
+        self.dataProtector = dataProtector
         try? FileManager.default.createDirectory(at: self.baseURL, withIntermediateDirectories: true)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: self.baseURL.path)
     }
 
     public func load<T: Codable>(_ type: T.Type, file: String) throws -> T {
@@ -42,9 +45,12 @@ public final class WMSDataStore: Sendable {
         guard FileManager.default.fileExists(atPath: url.path) else {
             return try JSONDecoder().decode(T.self, from: Data("[]".utf8))
         }
-        let data = try Data(contentsOf: url)
+        var data = try Data(contentsOf: url)
         if data.isEmpty {
             return try JSONDecoder().decode(T.self, from: Data("[]".utf8))
+        }
+        if let protector = dataProtector {
+            data = try protector.decrypt(data)
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -52,7 +58,11 @@ public final class WMSDataStore: Sendable {
     /// Call ONLY inside `atomicWrite` closure — does not acquire lock.
     internal func saveUnsafe<T: Codable>(_ items: T, file: String) throws {
         let url = baseURL.appendingPathComponent(file)
-        let data = try JSONEncoder().encode(items)
+        var data = try JSONEncoder().encode(items)
+        if let protector = dataProtector {
+            data = try protector.encrypt(data)
+        }
         try data.write(to: url, options: .atomic)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 }

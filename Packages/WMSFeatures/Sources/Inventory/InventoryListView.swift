@@ -23,6 +23,7 @@ public struct InventoryListView: View {
     @State private var selectedWarehouseID: UUID?
     @State private var showSuccessToast = false
     @State private var successMessage = ""
+    @State private var showNoWarehouseAlert = false
 
     public init(viewModel: InventoryListViewModel, warehouses: Binding<[Warehouse]>) {
         self.viewModel = viewModel
@@ -96,6 +97,10 @@ public struct InventoryListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    guard !warehouses.isEmpty else {
+                        showNoWarehouseAlert = true
+                        return
+                    }
                     resetForm()
                     selectedWarehouseID = warehouses.first?.id
                     showCreateSheet = true
@@ -103,7 +108,6 @@ public struct InventoryListView: View {
                     Label("Add Item", systemImage: "plus")
                 }
                 .keyboardShortcut("n")
-                .disabled(warehouses.isEmpty)
             }
         }
         .sheet(isPresented: $showCreateSheet) {
@@ -168,6 +172,11 @@ public struct InventoryListView: View {
         }
         .sheet(item: $stockMovementItem) { item in
             StockMovementView(viewModel: viewModel, item: item)
+        }
+        .alert("No Warehouses", isPresented: $showNoWarehouseAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Create a warehouse first before adding inventory items.")
         }
         .alert("Delete Item?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {

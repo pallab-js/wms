@@ -6,7 +6,7 @@ import WMSCore
 public final class SettingsViewModel {
     var organisationName: String = ""
     var defaultUnitOfMeasure: String = "units"
-    public var currentUserRole: UserRole = .administrator {
+    public var currentUserRole: UserRole = .inventoryClerk {
         didSet { onRoleChanged?(currentUserRole) }
     }
     var savedMessage: String?

@@ -33,4 +33,26 @@ public final class FileTransferOrderRepository: TransferOrderRepository {
         orders.removeAll { $0.id == id }
         try store.save(orders, file: file)
     }
+
+    public func saveWithAtomicItems(_ order: TransferOrder, items: [InventoryItem]) async throws {
+        try store.atomicWrite { store in
+            var orders: [TransferOrder] = try store.loadUnsafe([TransferOrder].self, file: self.file)
+            if let index = orders.firstIndex(where: { $0.id == order.id }) {
+                orders[index] = order
+            } else {
+                orders.append(order)
+            }
+            try store.saveUnsafe(orders, file: self.file)
+
+            var existingItems: [InventoryItem] = try store.loadUnsafe([InventoryItem].self, file: "inventory_items.json")
+            for item in items {
+                if let index = existingItems.firstIndex(where: { $0.id == item.id }) {
+                    existingItems[index] = item
+                } else {
+                    existingItems.append(item)
+                }
+            }
+            try store.saveUnsafe(existingItems, file: "inventory_items.json")
+        }
+    }
 }

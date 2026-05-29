@@ -7,6 +7,8 @@ public struct TransferListView: View {
     @Binding var warehouses: [Warehouse]
 
     @State private var showCreateSheet = false
+    @State private var showNoWarehouseAlert = false
+    @State private var showOneWarehouseAlert = false
 
     public init(viewModel: TransferListViewModel, warehouses: Binding<[Warehouse]>) {
         self.viewModel = viewModel
@@ -63,12 +65,19 @@ public struct TransferListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    guard !warehouses.isEmpty else {
+                        showNoWarehouseAlert = true
+                        return
+                    }
+                    guard warehouses.count >= 2 else {
+                        showOneWarehouseAlert = true
+                        return
+                    }
                     showCreateSheet = true
                 } label: {
                     Label("New Transfer", systemImage: "plus")
                 }
                 .keyboardShortcut("n")
-                .disabled(warehouses.count < 2)
             }
         }
         .sheet(isPresented: $showCreateSheet) {
@@ -85,6 +94,16 @@ public struct TransferListView: View {
                 }
                 .padding()
             }
+        }
+        .alert("No Warehouses", isPresented: $showNoWarehouseAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Create at least one warehouse before creating a transfer.")
+        }
+        .alert("Need a Second Warehouse", isPresented: $showOneWarehouseAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Transfers require at least two warehouses. Create another warehouse first.")
         }
     }
 

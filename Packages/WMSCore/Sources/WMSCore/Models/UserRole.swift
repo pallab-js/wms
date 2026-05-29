@@ -21,15 +21,16 @@ public enum UserRole: String, Codable, CaseIterable, Sendable {
             return Set(Permission.allCases)
         case .warehouseManager:
             return [
-                .createWarehouse, .editWarehouse,
-                .createEmployee, .editEmployee,
-                .recordStockIn, .recordStockOut, .adjustStock,
-                .createTransfer, .approveTransfer,
+                .createWarehouse, .editWarehouse, .deactivateWarehouse, .deleteWarehouse,
+                .createEmployee, .editEmployee, .deactivateEmployee, .deleteEmployee,
+                .recordStockIn, .recordStockOut, .adjustStock, .editInventoryItem, .deleteInventoryItem,
+                .createTransfer, .submitTransfer, .approveTransfer, .executeTransfer,
+                .completeTransfer, .cancelTransfer,
                 .viewReports, .exportData
             ]
         case .inventoryClerk:
             return [
-                .recordStockIn, .recordStockOut, .adjustStock,
+                .recordStockIn, .recordStockOut, .adjustStock, .editInventoryItem,
                 .viewReports
             ]
         case .analyst:
@@ -43,15 +44,23 @@ public enum UserRole: String, Codable, CaseIterable, Sendable {
 public enum Permission: String, Codable, CaseIterable, Sendable {
     case createWarehouse
     case editWarehouse
+    case deactivateWarehouse
     case deleteWarehouse
     case createEmployee
     case editEmployee
     case deactivateEmployee
+    case deleteEmployee
     case recordStockIn
     case recordStockOut
     case adjustStock
+    case editInventoryItem
+    case deleteInventoryItem
     case createTransfer
+    case submitTransfer
     case approveTransfer
+    case executeTransfer
+    case completeTransfer
+    case cancelTransfer
     case viewReports
     case exportData
     case manageSettings

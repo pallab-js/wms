@@ -31,7 +31,7 @@ public final class InventoryAlertService: Sendable {
             try await alertRepository.save(alert)
             alertCallback?("Low Stock Alert", alert.message)
         } catch {
-            logger.error("Failed to save alert for \(item.sku, privacy: .public): \(error, privacy: .public)")
+            logger.error("Failed to save low-stock alert: \(error, privacy: .public)")
         }
     }
 

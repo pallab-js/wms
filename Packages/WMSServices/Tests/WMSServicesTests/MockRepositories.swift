@@ -15,6 +15,19 @@ final class MockInventoryItemRepository: InventoryItemRepository {
         return items
     }
 
+    func fetchAll(forWarehouseID warehouseID: UUID?, page: Int, pageSize: Int) async throws -> PaginatedResult<InventoryItem> {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        let filtered: [InventoryItem]
+        if let warehouseID {
+            filtered = items.filter { $0.warehouseID == warehouseID }
+        } else {
+            filtered = items
+        }
+        let start = page * pageSize
+        let paged = Array(filtered.dropFirst(start).prefix(pageSize))
+        return PaginatedResult(items: paged, totalCount: filtered.count, page: page, pageSize: pageSize)
+    }
+
     func fetch(byID id: UUID) async throws -> InventoryItem? {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
         return items.first { $0.id == id }
@@ -46,6 +59,17 @@ final class MockInventoryItemRepository: InventoryItemRepository {
     func delete(id: UUID) async throws {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
         items.removeAll { $0.id == id }
+    }
+
+    func saveAll(_ items: [InventoryItem]) async throws {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        for item in items {
+            if let index = self.items.firstIndex(where: { $0.id == item.id }) {
+                self.items[index] = item
+            } else {
+                self.items.append(item)
+            }
+        }
     }
 }
 
@@ -98,6 +122,15 @@ final class MockTransferOrderRepository: TransferOrderRepository {
     func delete(id: UUID) async throws {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
         orders.removeAll { $0.id == id }
+    }
+
+    func saveWithAtomicItems(_ order: TransferOrder, items: [InventoryItem]) async throws {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        if let index = orders.firstIndex(where: { $0.id == order.id }) {
+            orders[index] = order
+        } else {
+            orders.append(order)
+        }
     }
 }
 
@@ -182,5 +215,41 @@ final class MockAlertRepository: AlertRepository {
         if let index = alerts.firstIndex(where: { $0.id == id }) {
             alerts[index].isAcknowledged = true
         }
+    }
+}
+
+final class MockWarehouseRepository: WarehouseRepository {
+    var warehouses: [Warehouse] = []
+    var shouldThrow = false
+
+    func fetchAll() async throws -> [Warehouse] {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        return warehouses
+    }
+
+    func fetchAll(page: Int, pageSize: Int) async throws -> PaginatedResult<Warehouse> {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        let start = page * pageSize
+        let items = Array(warehouses.dropFirst(start).prefix(pageSize))
+        return PaginatedResult(items: items, totalCount: warehouses.count, page: page, pageSize: pageSize)
+    }
+
+    func fetch(byID id: UUID) async throws -> Warehouse? {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        return warehouses.first { $0.id == id }
+    }
+
+    func save(_ warehouse: Warehouse) async throws {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        if let index = warehouses.firstIndex(where: { $0.id == warehouse.id }) {
+            warehouses[index] = warehouse
+        } else {
+            warehouses.append(warehouse)
+        }
+    }
+
+    func delete(id: UUID) async throws {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        warehouses.removeAll { $0.id == id }
     }
 }

@@ -108,7 +108,7 @@ public struct InputValidator {
         let codeResult = validateNotEmpty(employeeCode, field: "Employee code")
         if !codeResult.isValid { errors.append(contentsOf: codeResult.errors) }
 
-        let emailResult = validateNotEmpty(email, field: "Email")
+        let emailResult = validateEmail(email)
         if !emailResult.isValid { errors.append(contentsOf: emailResult.errors) }
 
         return ValidationResult(isValid: errors.isEmpty, errors: errors)
@@ -123,10 +123,21 @@ public struct InputValidator {
     }
 
     public static func requirePositiveInt(_ value: String, field: String) throws -> Int {
-        let result = validatePositiveInt(value, field: field)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = validatePositiveInt(trimmed, field: field)
         if !result.isValid {
             throw WMSError.validationError(result.errors.joined(separator: ", "))
         }
-        return Int(value)!
+        guard let intVal = Int(trimmed) else {
+            throw WMSError.validationError("\(field) must be a valid integer.")
+        }
+        return intVal
+    }
+
+    public static func requireValidEmail(_ value: String) throws {
+        let result = validateEmail(value)
+        if !result.isValid {
+            throw WMSError.validationError(result.errors.joined(separator: ", "))
+        }
     }
 }

@@ -8,6 +8,7 @@ public final class DashboardViewModel {
     var data: DashboardData?
     var isLoading = false
     var errorMessage: String?
+    var lastRefreshDate: Date?
 
     private let service: DashboardService
 
@@ -20,9 +21,14 @@ public final class DashboardViewModel {
         errorMessage = nil
         do {
             data = try await service.getDashboardData()
+            lastRefreshDate = Date()
         } catch {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+    }
+
+    public func refresh() async {
+        await loadDashboard()
     }
 }

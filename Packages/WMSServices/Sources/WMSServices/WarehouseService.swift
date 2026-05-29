@@ -5,15 +5,18 @@ public final class WarehouseService: Sendable {
     private let repository: any WarehouseRepository
     private let auditLogger: any AuditLogging
     private let inventoryService: InventoryService?
+    private let accessController: any PermissionChecking
 
     public init(
         repository: any WarehouseRepository,
         inventoryService: InventoryService? = nil,
-        auditLogger: any AuditLogging = NullAuditLogger()
+        auditLogger: any AuditLogging = NullAuditLogger(),
+        accessController: any PermissionChecking = NullPermissionChecker()
     ) {
         self.repository = repository
         self.inventoryService = inventoryService
         self.auditLogger = auditLogger
+        self.accessController = accessController
     }
 
     public func getAllWarehouses() async throws -> [Warehouse] {
@@ -33,6 +36,7 @@ public final class WarehouseService: Sendable {
         address: String,
         capacity: Int
     ) async throws -> Warehouse {
+        try accessController.require(.createWarehouse)
         try InputValidator.requireNotEmpty(name, field: "Name")
         try InputValidator.requireNotEmpty(code, field: "Code")
         guard capacity > 0 else {
@@ -56,6 +60,7 @@ public final class WarehouseService: Sendable {
     }
 
     public func updateWarehouse(_ warehouse: Warehouse) async throws {
+        try accessController.require(.editWarehouse)
         try InputValidator.requireNotEmpty(warehouse.name, field: "Name")
         guard warehouse.capacity > 0 else {
             throw WMSError.validationError("Capacity must be greater than zero.")
@@ -70,6 +75,7 @@ public final class WarehouseService: Sendable {
     }
 
     public func deactivateWarehouse(id: UUID) async throws {
+        try accessController.require(.deactivateWarehouse)
         var warehouse = try await getWarehouse(byID: id)
         warehouse.isActive = false
         warehouse.updatedAt = Date()
@@ -78,6 +84,7 @@ public final class WarehouseService: Sendable {
     }
 
     public func deleteWarehouse(id: UUID) async throws {
+        try accessController.require(.deleteWarehouse)
         let inventoryCount = try await inventoryService?.getItemsCount(forWarehouseID: id) ?? 0
         guard inventoryCount == 0 else {
             throw WMSError.validationError("Cannot delete warehouse with \(inventoryCount) inventory item(s). Remove or reassign items first.")

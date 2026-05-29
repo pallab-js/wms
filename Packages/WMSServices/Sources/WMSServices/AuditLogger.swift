@@ -40,7 +40,7 @@ public final class AuditLogger: @unchecked Sendable, AuditLogging {
         do {
             try await repository.insert(entry)
         } catch {
-            logger.error("Audit log failed for \(entityType) \(entityID, privacy: .public): \(error, privacy: .public)")
+            logger.error("Audit log failed for \(entityType, privacy: .public): \(error, privacy: .public)")
         }
     }
 }

@@ -28,11 +28,14 @@ final class DependencyContainer {
     let auditLogger: AuditLogger
     let auditLogService: AuditLogService
 
+    let accessController: AccessController
     let settingsViewModel: SettingsViewModel
 
     init() {
-        self.store = WMSDataStore()
+        let dataProtector = KeychainDataProtector()
+        self.store = WMSDataStore(dataProtector: dataProtector)
         self.router = AppRouter()
+        self.accessController = AccessController()
 
         self.warehouseRepository = FileWarehouseRepository(store: store)
         self.inventoryItemRepository = FileInventoryItemRepository(store: store)
@@ -50,21 +53,25 @@ final class DependencyContainer {
             itemRepository: inventoryItemRepository,
             movementRepository: stockMovementRepository,
             alertService: inventoryAlertService,
-            auditLogger: auditLogger
+            auditLogger: auditLogger,
+            accessController: accessController
         )
         self.warehouseService = WarehouseService(
             repository: warehouseRepository,
             inventoryService: inventoryService,
-            auditLogger: auditLogger
+            auditLogger: auditLogger,
+            accessController: accessController
         )
         self.employeeService = EmployeeService(
             repository: employeeRepository,
-            auditLogger: auditLogger
+            auditLogger: auditLogger,
+            accessController: accessController
         )
         self.transferService = TransferService(
             transferRepository: transferOrderRepository,
             itemRepository: inventoryItemRepository,
-            auditLogger: auditLogger
+            auditLogger: auditLogger,
+            accessController: accessController
         )
         self.stockMovementService = StockMovementService(
             movementRepository: stockMovementRepository
@@ -72,13 +79,18 @@ final class DependencyContainer {
         self.dashboardService = DashboardService(
             warehouseRepository: warehouseRepository,
             inventoryService: inventoryService,
-            movementService: stockMovementService
+            movementService: stockMovementService,
+            employeeService: employeeService,
+            transferService: transferService,
+            alertService: inventoryAlertService
         )
         self.settingsViewModel = SettingsViewModel(
-            onRoleChanged: { [weak auditLogger] role in
+            onRoleChanged: { [weak accessController, weak auditLogger] role in
+                accessController?.currentUserRole = role
                 auditLogger?.currentUserRole = role.rawValue
             }
         )
+        accessController.currentUserRole = settingsViewModel.currentUserRole
         auditLogger.currentUserRole = settingsViewModel.currentUserRole.rawValue
     }
 }

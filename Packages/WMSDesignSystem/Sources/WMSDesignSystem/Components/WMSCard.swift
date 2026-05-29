@@ -25,33 +25,73 @@ public struct WMSStatCard: View {
     let value: String
     let icon: String
     let color: Color
+    let subtitle: String?
 
-    public init(title: String, value: String, icon: String, color: Color = .wmsAccent) {
+    public init(title: String, value: String, icon: String, color: Color = .wmsAccent, subtitle: String? = nil) {
         self.title = title
         self.value = value
         self.icon = icon
         self.color = color
+        self.subtitle = subtitle
     }
 
     public var body: some View {
-        WMSCard {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.wmsTitle)
-                    .foregroundColor(color)
-                    .frame(width: 32, height: 32)
+        content
+            .padding(.leading, 0)
+            .background(Color.wmsSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.wmsSeparator.opacity(0.5), lineWidth: 1)
+            )
+    }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.wmsCaption)
-                        .foregroundColor(.wmsTextSecondary)
-                    Text(value)
-                        .font(.wmsTitle)
-                        .foregroundColor(.wmsTextPrimary)
+    private var content: some View {
+        HStack(spacing: 0) {
+            accentBar
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    iconView
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                            .font(.wmsCaption)
+                            .foregroundColor(.wmsTextSecondary)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+                        Text(value)
+                            .font(.system(size: 26, weight: .bold, design: .default))
+                            .foregroundColor(.wmsTextPrimary)
+                    }
+                    Spacer(minLength: 0)
                 }
-
-                Spacer()
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.wmsCaption)
+                        .foregroundColor(.wmsTextTertiary)
+                }
             }
+            .padding(.vertical, 16)
+            .padding(.trailing, 16)
+        }
+        .frame(minHeight: 88)
+    }
+
+    private var accentBar: some View {
+        Rectangle()
+            .fill(color)
+            .frame(width: 4)
+            .frame(maxHeight: .infinity)
+    }
+
+    private var iconView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(color.opacity(0.12))
+                .frame(width: 40, height: 40)
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(color)
         }
     }
 }

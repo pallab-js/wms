@@ -5,15 +5,18 @@ public final class TransferService: Sendable {
     private let transferRepository: any TransferOrderRepository
     private let itemRepository: any InventoryItemRepository
     private let auditLogger: any AuditLogging
+    private let accessController: any PermissionChecking
 
     public init(
         transferRepository: any TransferOrderRepository,
         itemRepository: any InventoryItemRepository,
-        auditLogger: any AuditLogging = NullAuditLogger()
+        auditLogger: any AuditLogging = NullAuditLogger(),
+        accessController: any PermissionChecking = NullPermissionChecker()
     ) {
         self.transferRepository = transferRepository
         self.itemRepository = itemRepository
         self.auditLogger = auditLogger
+        self.accessController = accessController
     }
 
     public func getAllTransfers() async throws -> [TransferOrder] {
@@ -33,6 +36,7 @@ public final class TransferService: Sendable {
         lineItems: [TransferLineItem],
         notes: String
     ) async throws -> TransferOrder {
+        try accessController.require(.createTransfer)
         guard sourceWarehouseID != destinationWarehouseID else {
             throw WMSError.validationError("Source and destination warehouses must be different.")
         }
@@ -54,6 +58,7 @@ public final class TransferService: Sendable {
     }
 
     public func submitTransfer(id: UUID) async throws {
+        try accessController.require(.submitTransfer)
         var order = try await getTransfer(byID: id)
         guard order.status == .draft else {
             throw WMSError.invalidTransferState(from: order.status.rawValue, to: "submitted")
@@ -64,6 +69,7 @@ public final class TransferService: Sendable {
     }
 
     public func approveTransfer(id: UUID) async throws {
+        try accessController.require(.approveTransfer)
         var order = try await getTransfer(byID: id)
         guard order.status == .submitted else {
             throw WMSError.invalidTransferState(from: order.status.rawValue, to: "approved")
@@ -87,6 +93,7 @@ public final class TransferService: Sendable {
     }
 
     public func executeTransfer(id: UUID) async throws {
+        try accessController.require(.executeTransfer)
         var order = try await getTransfer(byID: id)
         guard order.status == .approved else {
             throw WMSError.invalidTransferState(from: order.status.rawValue, to: "inTransit")
@@ -107,17 +114,18 @@ public final class TransferService: Sendable {
             }
             item.currentQuantity -= lineItem.requestedQuantity
             item.updatedAt = Date()
+            item.warehouseID = order.destinationWarehouseID
             updatedItems.append(item)
             order.lineItems[i].transferredQuantity = lineItem.requestedQuantity
         }
 
-        try await itemRepository.saveAll(updatedItems)
         order.status = .inTransit
-        try await transferRepository.save(order)
+        try await transferRepository.saveWithAtomicItems(order, items: updatedItems)
         await auditLogger.log(entityType: "TransferOrder", entityID: id, action: "executed")
     }
 
     public func completeTransfer(id: UUID) async throws {
+        try accessController.require(.completeTransfer)
         var order = try await getTransfer(byID: id)
         guard order.status == .inTransit else {
             throw WMSError.invalidTransferState(from: order.status.rawValue, to: "completed")
@@ -133,24 +141,18 @@ public final class TransferService: Sendable {
             guard var item = try await itemRepository.fetch(byID: lineItem.inventoryItemID) else {
                 throw WMSError.inventoryItemNotFound
             }
-            guard item.warehouseID == order.destinationWarehouseID else {
-                throw WMSError.validationError(
-                    "Item '\(item.name)' is not assigned to the destination warehouse."
-                )
-            }
-            item.currentQuantity += lineItem.transferredQuantity
             item.updatedAt = Date()
             updatedItems.append(item)
         }
 
-        try await itemRepository.saveAll(updatedItems)
         order.status = .completed
         order.completedDate = Date()
-        try await transferRepository.save(order)
+        try await transferRepository.saveWithAtomicItems(order, items: updatedItems)
         await auditLogger.log(entityType: "TransferOrder", entityID: id, action: "completed")
     }
 
     public func cancelTransfer(id: UUID) async throws {
+        try accessController.require(.cancelTransfer)
         var order = try await getTransfer(byID: id)
         guard order.status == .submitted || order.status == .approved else {
             throw WMSError.invalidTransferState(from: order.status.rawValue, to: "cancelled")

@@ -6,17 +6,20 @@ public final class InventoryService: Sendable {
     private let movementRepository: any StockMovementRepository
     private let alertService: InventoryAlertService
     private let auditLogger: any AuditLogging
+    private let accessController: any PermissionChecking
 
     public init(
         itemRepository: any InventoryItemRepository,
         movementRepository: any StockMovementRepository,
         alertService: InventoryAlertService,
-        auditLogger: any AuditLogging = NullAuditLogger()
+        auditLogger: any AuditLogging = NullAuditLogger(),
+        accessController: any PermissionChecking = NullPermissionChecker()
     ) {
         self.itemRepository = itemRepository
         self.movementRepository = movementRepository
         self.alertService = alertService
         self.auditLogger = auditLogger
+        self.accessController = accessController
     }
 
     public func getAllItems(forWarehouseID warehouseID: UUID? = nil) async throws -> [InventoryItem] {
@@ -45,6 +48,7 @@ public final class InventoryService: Sendable {
         unitCost: Double,
         warehouseID: UUID
     ) async throws -> InventoryItem {
+        try accessController.require(.recordStockIn)
         try InputValidator.requireNotEmpty(sku, field: "SKU")
         try InputValidator.requireNotEmpty(name, field: "Name")
 
@@ -70,6 +74,7 @@ public final class InventoryService: Sendable {
     }
 
     public func updateItem(_ item: InventoryItem) async throws {
+        try accessController.require(.editInventoryItem)
         try InputValidator.requireNotEmpty(item.sku, field: "SKU")
         var updated = item
         updated.sku = item.sku.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -80,6 +85,7 @@ public final class InventoryService: Sendable {
     }
 
     public func deleteItem(id: UUID) async throws {
+        try accessController.require(.deleteInventoryItem)
         try await itemRepository.delete(id: id)
         await auditLogger.log(entityType: "InventoryItem", entityID: id, action: "deleted")
     }
@@ -91,6 +97,13 @@ public final class InventoryService: Sendable {
         note: String?,
         referenceNumber: String?
     ) async throws -> StockMovement {
+        let permission: Permission = switch type {
+        case .stockIn: .recordStockIn
+        case .stockOut: .recordStockOut
+        case .adjustment: .adjustStock
+        }
+        try accessController.require(permission)
+
         guard quantity > 0 else {
             throw WMSError.validationError("Quantity must be greater than zero.")
         }
