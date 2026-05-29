@@ -20,9 +20,10 @@ public final class WMSDataStore: Sendable {
     }
 
     public func load<T: Codable>(_ type: T.Type, file: String) throws -> T {
-        try lock.withLock {
-            try loadUnsafe(type, file: file)
+        let rawData = try lock.withLock {
+            try loadRawUnsafe(file: file)
         }
+        return try JSONDecoder().decode(type, from: rawData)
     }
 
     public func save<T: Codable>(_ items: T, file: String) throws {
@@ -41,18 +42,23 @@ public final class WMSDataStore: Sendable {
 
     /// Call ONLY inside `atomicWrite` closure — does not acquire lock.
     internal func loadUnsafe<T: Codable>(_ type: T.Type, file: String) throws -> T {
+        try JSONDecoder().decode(type, from: loadRawUnsafe(file: file))
+    }
+
+    /// Call ONLY inside `atomicWrite` closure or under `lock.withLock` — does not acquire lock.
+    private func loadRawUnsafe(file: String) throws -> Data {
         let url = baseURL.appendingPathComponent(file)
         guard FileManager.default.fileExists(atPath: url.path) else {
-            return try JSONDecoder().decode(T.self, from: Data("[]".utf8))
+            return Data("[]".utf8)
         }
         var data = try Data(contentsOf: url)
         if data.isEmpty {
-            return try JSONDecoder().decode(T.self, from: Data("[]".utf8))
+            return Data("[]".utf8)
         }
         if let protector = dataProtector {
             data = try protector.decrypt(data)
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        return data
     }
 
     /// Call ONLY inside `atomicWrite` closure — does not acquire lock.
