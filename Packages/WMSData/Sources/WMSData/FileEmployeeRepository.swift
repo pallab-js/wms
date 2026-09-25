@@ -15,10 +15,7 @@ public final class FileEmployeeRepository: EmployeeRepository {
 
     public func fetchAll(page: Int, pageSize: Int) async throws -> PaginatedResult<Employee> {
         let all: [Employee] = try store.load([Employee].self, file: file)
-        let start = page * pageSize
-        let end = min(start + pageSize, all.count)
-        let items = start < all.count ? Array(all[start..<end]) : []
-        return PaginatedResult(items: items, totalCount: all.count, page: page, pageSize: pageSize)
+        return Pagination.page(all, page: page, pageSize: pageSize)
     }
 
     public func fetch(byID id: UUID) async throws -> Employee? {
@@ -32,18 +29,22 @@ public final class FileEmployeeRepository: EmployeeRepository {
     }
 
     public func save(_ employee: Employee) async throws {
-        var employees: [Employee] = try store.load([Employee].self, file: file)
-        if let index = employees.firstIndex(where: { $0.id == employee.id }) {
-            employees[index] = employee
-        } else {
-            employees.append(employee)
+        try store.atomicWrite { store in
+            var employees: [Employee] = try store.loadUnsafe([Employee].self, file: self.file)
+            if let index = employees.firstIndex(where: { $0.id == employee.id }) {
+                employees[index] = employee
+            } else {
+                employees.append(employee)
+            }
+            try store.saveUnsafe(employees, file: self.file)
         }
-        try store.save(employees, file: file)
     }
 
     public func delete(id: UUID) async throws {
-        var employees: [Employee] = try store.load([Employee].self, file: file)
-        employees.removeAll { $0.id == id }
-        try store.save(employees, file: file)
+        try store.atomicWrite { store in
+            var employees: [Employee] = try store.loadUnsafe([Employee].self, file: self.file)
+            employees.removeAll { $0.id == id }
+            try store.saveUnsafe(employees, file: self.file)
+        }
     }
 }

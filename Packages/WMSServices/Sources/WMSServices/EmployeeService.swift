@@ -70,11 +70,21 @@ public final class EmployeeService: Sendable {
     public func updateEmployee(_ employee: Employee) async throws {
         try accessController.require(.editEmployee)
         try InputValidator.requireNotEmpty(employee.firstName, field: "First name")
+        try InputValidator.requireNotEmpty(employee.lastName, field: "Last name")
+        try InputValidator.requireNotEmpty(employee.employeeCode, field: "Employee code")
+        try InputValidator.requireValidEmail(employee.email)
         var updated = employee
         updated.firstName = employee.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.lastName = employee.lastName.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.employeeCode = employee.employeeCode.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.email = employee.email.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let existing = try await repository.fetchAll()
+        guard !existing.contains(where: {
+            $0.id != updated.id && $0.employeeCode.lowercased() == updated.employeeCode.lowercased()
+        }) else {
+            throw WMSError.duplicateEmployeeCode(updated.employeeCode)
+        }
         try await repository.save(updated)
         await auditLogger.log(entityType: "Employee", entityID: employee.id, action: "updated")
     }

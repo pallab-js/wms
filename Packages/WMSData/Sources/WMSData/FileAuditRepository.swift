@@ -10,9 +10,11 @@ public final class FileAuditRepository: AuditRepository {
     }
 
     public func insert(_ entry: AuditEntry) async throws {
-        var entries: [AuditEntry] = try store.load([AuditEntry].self, file: file)
-        entries.append(entry)
-        try store.save(entries, file: file)
+        try store.atomicWrite { store in
+            var entries: [AuditEntry] = try store.loadUnsafe([AuditEntry].self, file: self.file)
+            entries.append(entry)
+            try store.saveUnsafe(entries, file: self.file)
+        }
     }
 
     public func fetchAll(

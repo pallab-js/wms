@@ -23,8 +23,10 @@ public final class FileStockMovementRepository: StockMovementRepository {
     }
 
     public func save(_ movement: StockMovement) async throws {
-        var movements: [StockMovement] = try store.load([StockMovement].self, file: file)
-        movements.append(movement)
-        try store.save(movements, file: file)
+        try store.atomicWrite { store in
+            var movements: [StockMovement] = try store.loadUnsafe([StockMovement].self, file: self.file)
+            movements.append(movement)
+            try store.saveUnsafe(movements, file: self.file)
+        }
     }
 }

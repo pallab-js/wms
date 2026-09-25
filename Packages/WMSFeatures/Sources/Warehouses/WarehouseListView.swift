@@ -59,8 +59,8 @@ public struct WarehouseListView: View {
                     showCreateSheet = true
                 } label: {
                     Label("Add Warehouse", systemImage: "plus")
-                        .keyboardShortcut("n")
                 }
+                .keyboardShortcut("n")
             }
         }
         .sheet(isPresented: $showCreateSheet) {
@@ -76,11 +76,10 @@ public struct WarehouseListView: View {
                             name: newName, code: newCode,
                             address: newAddress, capacity: Int(newCapacity) ?? 0
                         )
+                        guard viewModel.errorMessage == nil else { return }
                         showCreateSheet = false
-                        if viewModel.errorMessage == nil {
-                            successMessage = "Warehouse created"
-                            showSuccessToast = true
-                        }
+                        successMessage = "Warehouse created"
+                        showSuccessToast = true
                     }
                 },
                 onCancel: { showCreateSheet = false }
@@ -102,11 +101,10 @@ public struct WarehouseListView: View {
                         updated.capacity = Int(newCapacity) ?? 0
                         updated.updatedAt = Date()
                         await viewModel.updateWarehouse(updated)
+                        guard viewModel.errorMessage == nil else { return }
                         editingWarehouse = nil
-                        if viewModel.errorMessage == nil {
-                            successMessage = "Warehouse updated"
-                            showSuccessToast = true
-                        }
+                        successMessage = "Warehouse updated"
+                        showSuccessToast = true
                     }
                 },
                 onCancel: { editingWarehouse = nil }

@@ -8,6 +8,7 @@ public final class TransferListViewModel {
     var transfers: [TransferOrder] = []
     var inventoryItems: [InventoryItem] = []
     var isLoading = false
+    var isSaving = false
     var errorMessage: String?
 
     private let transferService: TransferService
@@ -45,6 +46,9 @@ public final class TransferListViewModel {
         lineItems: [TransferLineItem],
         notes: String
     ) async {
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
         do {
             _ = try await transferService.createTransfer(
                 sourceWarehouseID: sourceWarehouseID,

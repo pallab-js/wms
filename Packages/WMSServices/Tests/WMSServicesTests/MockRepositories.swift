@@ -23,9 +23,11 @@ final class MockInventoryItemRepository: InventoryItemRepository {
         } else {
             filtered = items
         }
-        let start = page * pageSize
-        let paged = Array(filtered.dropFirst(start).prefix(pageSize))
-        return PaginatedResult(items: paged, totalCount: filtered.count, page: page, pageSize: pageSize)
+        let safePage = max(0, page)
+        let safeSize = max(1, pageSize)
+        let start = safePage * safeSize
+        let paged = Array(filtered.dropFirst(start).prefix(safeSize))
+        return PaginatedResult(items: paged, totalCount: filtered.count, page: safePage, pageSize: safeSize)
     }
 
     func fetch(byID id: UUID) async throws -> InventoryItem? {
@@ -35,7 +37,9 @@ final class MockInventoryItemRepository: InventoryItemRepository {
 
     func fetch(bySKU sku: String, inWarehouseID warehouseID: UUID) async throws -> InventoryItem? {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
-        return items.first { $0.sku == sku && $0.warehouseID == warehouseID }
+        return items.first {
+            $0.warehouseID == warehouseID && $0.sku.caseInsensitiveCompare(sku) == .orderedSame
+        }
     }
 
     func save(_ item: InventoryItem) async throws {
@@ -47,13 +51,18 @@ final class MockInventoryItemRepository: InventoryItemRepository {
         }
     }
 
-    func saveWithMovement(_ item: InventoryItem, movement: StockMovement) async throws {
+    func applyMovement(
+        itemID: UUID,
+        _ transform: @Sendable (inout InventoryItem) throws -> StockMovement
+    ) async throws -> (InventoryItem, StockMovement) {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            items[index] = item
-        } else {
-            items.append(item)
+        guard let index = items.firstIndex(where: { $0.id == itemID }) else {
+            throw WMSError.inventoryItemNotFound
         }
+        var item = items[index]
+        let movement = try transform(&item)
+        items[index] = item
+        return (item, movement)
     }
 
     func delete(id: UUID) async throws {
@@ -98,7 +107,11 @@ final class MockStockMovementRepository: StockMovementRepository {
 
 final class MockTransferOrderRepository: TransferOrderRepository {
     var orders: [TransferOrder] = []
+    var items: [InventoryItem] = []
     var shouldThrow = false
+    /// Mirrors the file repositories, which share one backing store between the
+    /// transfer order and inventory item files.
+    var itemRepository: MockInventoryItemRepository?
 
     func fetchAll() async throws -> [TransferOrder] {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
@@ -124,12 +137,22 @@ final class MockTransferOrderRepository: TransferOrderRepository {
         orders.removeAll { $0.id == id }
     }
 
-    func saveWithAtomicItems(_ order: TransferOrder, items: [InventoryItem]) async throws {
+    func update(
+        id: UUID,
+        _ mutate: @Sendable (inout TransferOrder, inout [InventoryItem]) throws -> Void
+    ) async throws {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
-        if let index = orders.firstIndex(where: { $0.id == order.id }) {
-            orders[index] = order
+        guard let index = orders.firstIndex(where: { $0.id == id }) else {
+            throw WMSError.transferNotFound
+        }
+        var order = orders[index]
+        var updatedItems = itemRepository?.items ?? items
+        try mutate(&order, &updatedItems)
+        orders[index] = order
+        if let itemRepository {
+            itemRepository.items = updatedItems
         } else {
-            orders.append(order)
+            items = updatedItems
         }
     }
 }
@@ -141,6 +164,15 @@ final class MockEmployeeRepository: EmployeeRepository {
     func fetchAll() async throws -> [Employee] {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
         return employees
+    }
+
+    func fetchAll(page: Int, pageSize: Int) async throws -> PaginatedResult<Employee> {
+        if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
+        let safePage = max(0, page)
+        let safeSize = max(1, pageSize)
+        let start = safePage * safeSize
+        let items = Array(employees.dropFirst(start).prefix(safeSize))
+        return PaginatedResult(items: items, totalCount: employees.count, page: safePage, pageSize: safeSize)
     }
 
     func fetch(byID id: UUID) async throws -> Employee? {
@@ -212,9 +244,10 @@ final class MockAlertRepository: AlertRepository {
 
     func acknowledge(id: UUID) async throws {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
-        if let index = alerts.firstIndex(where: { $0.id == id }) {
-            alerts[index].isAcknowledged = true
+        guard let index = alerts.firstIndex(where: { $0.id == id }) else {
+            throw WMSError.validationError("Alert not found.")
         }
+        alerts[index].isAcknowledged = true
     }
 }
 
@@ -229,9 +262,11 @@ final class MockWarehouseRepository: WarehouseRepository {
 
     func fetchAll(page: Int, pageSize: Int) async throws -> PaginatedResult<Warehouse> {
         if shouldThrow { throw WMSError.persistenceFailed("Mock error") }
-        let start = page * pageSize
-        let items = Array(warehouses.dropFirst(start).prefix(pageSize))
-        return PaginatedResult(items: items, totalCount: warehouses.count, page: page, pageSize: pageSize)
+        let safePage = max(0, page)
+        let safeSize = max(1, pageSize)
+        let start = safePage * safeSize
+        let items = Array(warehouses.dropFirst(start).prefix(safeSize))
+        return PaginatedResult(items: items, totalCount: warehouses.count, page: safePage, pageSize: safeSize)
     }
 
     func fetch(byID id: UUID) async throws -> Warehouse? {

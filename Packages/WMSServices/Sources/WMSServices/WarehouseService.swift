@@ -4,12 +4,12 @@ import WMSCore
 public final class WarehouseService: Sendable {
     private let repository: any WarehouseRepository
     private let auditLogger: any AuditLogging
-    private let inventoryService: InventoryService?
+    private let inventoryService: InventoryService
     private let accessController: any PermissionChecking
 
     public init(
         repository: any WarehouseRepository,
-        inventoryService: InventoryService? = nil,
+        inventoryService: InventoryService,
         auditLogger: any AuditLogging = NullAuditLogger(),
         accessController: any PermissionChecking = NullPermissionChecker()
     ) {
@@ -39,9 +39,7 @@ public final class WarehouseService: Sendable {
         try accessController.require(.createWarehouse)
         try InputValidator.requireNotEmpty(name, field: "Name")
         try InputValidator.requireNotEmpty(code, field: "Code")
-        guard capacity > 0 else {
-            throw WMSError.validationError("Capacity must be greater than zero.")
-        }
+        try InputValidator.requirePositiveInt(capacity, field: "Capacity")
 
         let existing = try await repository.fetchAll()
         guard !existing.contains(where: { $0.code.lowercased() == code.lowercased() }) else {
@@ -62,14 +60,18 @@ public final class WarehouseService: Sendable {
     public func updateWarehouse(_ warehouse: Warehouse) async throws {
         try accessController.require(.editWarehouse)
         try InputValidator.requireNotEmpty(warehouse.name, field: "Name")
-        guard warehouse.capacity > 0 else {
-            throw WMSError.validationError("Capacity must be greater than zero.")
-        }
+        try InputValidator.requireNotEmpty(warehouse.code, field: "Code")
+        try InputValidator.requirePositiveInt(warehouse.capacity, field: "Capacity")
         var updated = warehouse
         updated.name = warehouse.name.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.code = warehouse.code.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.address = warehouse.address.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.updatedAt = Date()
+
+        let existing = try await repository.fetchAll()
+        guard !existing.contains(where: { $0.id != updated.id && $0.code.lowercased() == updated.code.lowercased() }) else {
+            throw WMSError.duplicateWarehouseCode(updated.code)
+        }
         try await repository.save(updated)
         await auditLogger.log(entityType: "Warehouse", entityID: warehouse.id, action: "updated")
     }
@@ -85,7 +87,7 @@ public final class WarehouseService: Sendable {
 
     public func deleteWarehouse(id: UUID) async throws {
         try accessController.require(.deleteWarehouse)
-        let inventoryCount = try await inventoryService?.getItemsCount(forWarehouseID: id) ?? 0
+        let inventoryCount = try await inventoryService.getItemsCount(forWarehouseID: id)
         guard inventoryCount == 0 else {
             throw WMSError.validationError("Cannot delete warehouse with \(inventoryCount) inventory item(s). Remove or reassign items first.")
         }

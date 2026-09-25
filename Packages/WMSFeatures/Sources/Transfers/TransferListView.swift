@@ -9,6 +9,8 @@ public struct TransferListView: View {
     @State private var showCreateSheet = false
     @State private var showNoWarehouseAlert = false
     @State private var showOneWarehouseAlert = false
+    @State private var showCancelConfirmation = false
+    @State private var transferToCancel: TransferOrder?
 
     public init(viewModel: TransferListViewModel, warehouses: Binding<[Warehouse]>) {
         self.viewModel = viewModel
@@ -56,9 +58,12 @@ public struct TransferListView: View {
                     .width(80)
 
                     TableColumn("Actions") { order in
-                        TransferActionButtons(order: order, viewModel: viewModel)
+                        TransferActionButtons(order: order, viewModel: viewModel) { transfer in
+                            transferToCancel = transfer
+                            showCancelConfirmation = true
+                        }
                     }
-                    .width(120)
+                    .width(min: 150, max: 200)
                 }
             }
         }
@@ -105,6 +110,18 @@ public struct TransferListView: View {
         } message: {
             Text("Transfers require at least two warehouses. Create another warehouse first.")
         }
+        .alert(
+            "Cancel Transfer?",
+            isPresented: $showCancelConfirmation,
+            presenting: transferToCancel
+        ) { transfer in
+            Button("Cancel Transfer", role: .destructive) {
+                Task { await viewModel.cancelTransfer(id: transfer.id) }
+            }
+            Button("Keep Transfer", role: .cancel) {}
+        } message: { transfer in
+            Text("\(transfer.transferCode) will be marked as cancelled. This cannot be undone.")
+        }
     }
 
     private func warehouseName(for id: UUID) -> String {
@@ -126,6 +143,7 @@ public struct TransferListView: View {
 struct TransferActionButtons: View {
     let order: TransferOrder
     let viewModel: TransferListViewModel
+    let onCancelRequest: (TransferOrder) -> Void
 
     var body: some View {
         HStack(spacing: 4) {
@@ -134,11 +152,15 @@ struct TransferActionButtons: View {
                 Button("Submit") { Task { await viewModel.submitTransfer(id: order.id) } }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                Button("Cancel") { onCancelRequest(order) }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .foregroundColor(.wmsDestructive)
             case .submitted:
                 Button("Approve") { Task { await viewModel.approveTransfer(id: order.id) } }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                Button("Cancel") { Task { await viewModel.cancelTransfer(id: order.id) } }
+                Button("Cancel") { onCancelRequest(order) }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .foregroundColor(.wmsDestructive)
@@ -146,7 +168,7 @@ struct TransferActionButtons: View {
                 Button("Execute") { Task { await viewModel.executeTransfer(id: order.id) } }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                Button("Cancel") { Task { await viewModel.cancelTransfer(id: order.id) } }
+                Button("Cancel") { onCancelRequest(order) }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .foregroundColor(.wmsDestructive)

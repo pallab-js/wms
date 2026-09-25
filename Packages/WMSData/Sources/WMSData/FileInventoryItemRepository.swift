@@ -25,10 +25,7 @@ public final class FileInventoryItemRepository: InventoryItemRepository {
         } else {
             all
         }
-        let start = page * pageSize
-        let end = min(start + pageSize, filtered.count)
-        let items = start < filtered.count ? Array(filtered[start..<end]) : []
-        return PaginatedResult(items: items, totalCount: filtered.count, page: page, pageSize: pageSize)
+        return Pagination.page(filtered, page: page, pageSize: pageSize)
     }
 
     public func fetch(byID id: UUID) async throws -> InventoryItem? {
@@ -38,20 +35,12 @@ public final class FileInventoryItemRepository: InventoryItemRepository {
 
     public func fetch(bySKU sku: String, inWarehouseID warehouseID: UUID) async throws -> InventoryItem? {
         let items: [InventoryItem] = try store.load([InventoryItem].self, file: file)
-        return items.first { $0.sku == sku && $0.warehouseID == warehouseID }
+        return items.first {
+            $0.warehouseID == warehouseID && $0.sku.caseInsensitiveCompare(sku) == .orderedSame
+        }
     }
 
     public func save(_ item: InventoryItem) async throws {
-        var items: [InventoryItem] = try store.load([InventoryItem].self, file: file)
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            items[index] = item
-        } else {
-            items.append(item)
-        }
-        try store.save(items, file: file)
-    }
-
-    public func saveWithMovement(_ item: InventoryItem, movement: StockMovement) async throws {
         try store.atomicWrite { store in
             var items: [InventoryItem] = try store.loadUnsafe([InventoryItem].self, file: self.file)
             if let index = items.firstIndex(where: { $0.id == item.id }) {
@@ -60,17 +49,36 @@ public final class FileInventoryItemRepository: InventoryItemRepository {
                 items.append(item)
             }
             try store.saveUnsafe(items, file: self.file)
+        }
+    }
+
+    public func applyMovement(
+        itemID: UUID,
+        _ transform: @Sendable (inout InventoryItem) throws -> StockMovement
+    ) async throws -> (InventoryItem, StockMovement) {
+        try store.atomicWrite { store in
+            var items: [InventoryItem] = try store.loadUnsafe([InventoryItem].self, file: self.file)
+            guard let index = items.firstIndex(where: { $0.id == itemID }) else {
+                throw WMSError.inventoryItemNotFound
+            }
+            var item = items[index]
+            let movement = try transform(&item)
+            items[index] = item
+            try store.saveUnsafe(items, file: self.file)
 
             var movements: [StockMovement] = try store.loadUnsafe([StockMovement].self, file: self.movementFile)
             movements.append(movement)
             try store.saveUnsafe(movements, file: self.movementFile)
+            return (item, movement)
         }
     }
 
     public func delete(id: UUID) async throws {
-        var items: [InventoryItem] = try store.load([InventoryItem].self, file: file)
-        items.removeAll { $0.id == id }
-        try store.save(items, file: file)
+        try store.atomicWrite { store in
+            var items: [InventoryItem] = try store.loadUnsafe([InventoryItem].self, file: self.file)
+            items.removeAll { $0.id == id }
+            try store.saveUnsafe(items, file: self.file)
+        }
     }
 
     public func saveAll(_ items: [InventoryItem]) async throws {

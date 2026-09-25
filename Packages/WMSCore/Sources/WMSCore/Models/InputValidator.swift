@@ -13,6 +13,12 @@ public struct ValidationResult: Equatable {
 }
 
 public struct InputValidator {
+    /// Upper bound for any count-like value (quantity, threshold, capacity).
+    /// Keeps later arithmetic safely away from `Int` overflow.
+    public static let maxCount = 1_000_000_000
+    /// Upper bound for monetary values so totals stay finite and JSON-encodable.
+    public static let maxAmount = 1_000_000_000.0
+
     public static func validateNotEmpty(_ value: String, field: String) -> ValidationResult {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
@@ -22,22 +28,43 @@ public struct InputValidator {
     }
 
     public static func validatePositiveInt(_ value: String, field: String) -> ValidationResult {
-        guard let intValue = Int(value), intValue > 0 else {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let intValue = Int(trimmed) else {
+            return ValidationResult(isValid: false, errors: ["\(field) must be a whole number."])
+        }
+        guard intValue > 0 else {
             return ValidationResult(isValid: false, errors: ["\(field) must be a positive number."])
+        }
+        guard intValue <= maxCount else {
+            return ValidationResult(isValid: false, errors: ["\(field) must be \(maxCount) or less."])
         }
         return .valid
     }
 
     public static func validateNonNegativeInt(_ value: String, field: String) -> ValidationResult {
-        guard let intValue = Int(value), intValue >= 0 else {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let intValue = Int(trimmed) else {
+            return ValidationResult(isValid: false, errors: ["\(field) must be a whole number."])
+        }
+        guard intValue >= 0 else {
             return ValidationResult(isValid: false, errors: ["\(field) must be zero or more."])
+        }
+        guard intValue <= maxCount else {
+            return ValidationResult(isValid: false, errors: ["\(field) must be \(maxCount) or less."])
         }
         return .valid
     }
 
-    public static func validatePositiveDouble(_ value: String, field: String) -> ValidationResult {
-        guard let doubleValue = Double(value), doubleValue >= 0 else {
-            return ValidationResult(isValid: false, errors: ["\(field) must be a valid positive number."])
+    public static func validateNonNegativeDouble(_ value: String, field: String) -> ValidationResult {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let doubleValue = Double(trimmed), doubleValue.isFinite else {
+            return ValidationResult(isValid: false, errors: ["\(field) must be a number."])
+        }
+        guard doubleValue >= 0 else {
+            return ValidationResult(isValid: false, errors: ["\(field) must be zero or more."])
+        }
+        guard doubleValue <= maxAmount else {
+            return ValidationResult(isValid: false, errors: ["\(field) must be \(maxAmount) or less."])
         }
         return .valid
     }
@@ -88,7 +115,7 @@ public struct InputValidator {
         let thresholdResult = validateNonNegativeInt(threshold, field: "Threshold")
         if !thresholdResult.isValid { errors.append(contentsOf: thresholdResult.errors) }
 
-        let costResult = validatePositiveDouble(cost, field: "Unit cost")
+        let costResult = validateNonNegativeDouble(cost, field: "Unit cost")
         if !costResult.isValid { errors.append(contentsOf: costResult.errors) }
 
         return ValidationResult(isValid: errors.isEmpty, errors: errors)
@@ -132,6 +159,30 @@ public struct InputValidator {
             throw WMSError.validationError("\(field) must be a valid integer.")
         }
         return intVal
+    }
+
+    public static func requirePositiveInt(_ value: Int, field: String) throws {
+        guard value > 0 else {
+            throw WMSError.validationError("\(field) must be greater than zero.")
+        }
+        guard value <= maxCount else {
+            throw WMSError.validationError("\(field) must be \(maxCount) or less.")
+        }
+    }
+
+    public static func requireNonNegativeInt(_ value: Int, field: String) throws {
+        guard value >= 0 else {
+            throw WMSError.validationError("\(field) must be zero or more.")
+        }
+        guard value <= maxCount else {
+            throw WMSError.validationError("\(field) must be \(maxCount) or less.")
+        }
+    }
+
+    public static func requireNonNegativeDouble(_ value: Double, field: String) throws {
+        guard value.isFinite, value >= 0, value <= maxAmount else {
+            throw WMSError.validationError("\(field) must be a number between 0 and \(maxAmount).")
+        }
     }
 
     public static func requireValidEmail(_ value: String) throws {

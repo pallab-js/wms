@@ -10,7 +10,7 @@ struct WarehouseOSApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        Window("WarehouseOS", id: "main") {
             ContentView()
                 .environment(container.router)
                 .environment(container)

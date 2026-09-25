@@ -115,15 +115,24 @@ public struct TransferFormView: View {
                             lineItems: items,
                             notes: notes
                         )
+                        guard viewModel.errorMessage == nil else { return }
                         dismiss()
                     }
                 }
                 .disabled(
+                    viewModel.isSaving ||
                     sourceWarehouseID == nil ||
                     destinationWarehouseID == nil ||
                     sourceWarehouseID == destinationWarehouseID ||
                     lineItems.allSatisfy { $0.selectedItemID == nil || (Int($0.quantity) ?? 0) <= 0 }
                 )
+            }
+
+            if let error = viewModel.errorMessage {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.wmsCaption)
+                    .foregroundColor(.wmsDestructive)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding()

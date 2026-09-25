@@ -15,13 +15,22 @@ public final class KeychainDataProtector: @unchecked Sendable, DataProtection {
     public func encrypt(_ data: Data) throws -> Data {
         let key = try key()
         let sealedBox = try AES.GCM.seal(data, using: key)
-        return sealedBox.combined!
+        guard let combined = sealedBox.combined else {
+            throw WMSError.persistenceFailed("Unable to encrypt data.")
+        }
+        return combined
     }
 
     public func decrypt(_ data: Data) throws -> Data {
         let key = try key()
-        let sealedBox = try AES.GCM.SealedBox(combined: data)
-        return try AES.GCM.open(sealedBox, using: key)
+        do {
+            let sealedBox = try AES.GCM.SealedBox(combined: data)
+            return try AES.GCM.open(sealedBox, using: key)
+        } catch {
+            throw WMSError.persistenceFailed(
+                "Stored data could not be decrypted. It may be corrupt, or encrypted with a different key."
+            )
+        }
     }
 
     private func key() throws -> SymmetricKey {
@@ -42,6 +51,10 @@ public final class KeychainDataProtector: @unchecked Sendable, DataProtection {
         return newKey
     }
 
+    /// Returns the stored key, or `nil` when no key exists yet.
+    /// Any other status means the key exists but cannot be read (locked keychain,
+    /// denied access) — that must never fall through to creating a replacement key,
+    /// otherwise every existing file becomes permanently undecryptable.
     private func loadKeyFromKeychain() throws -> SymmetricKey? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -52,10 +65,19 @@ public final class KeychainDataProtector: @unchecked Sendable, DataProtection {
         ]
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess, let data = item as? Data else {
+        switch status {
+        case errSecSuccess:
+            guard let data = item as? Data, !data.isEmpty else {
+                throw WMSError.persistenceFailed("The encryption key stored in the Keychain is unreadable.")
+            }
+            return SymmetricKey(data: data)
+        case errSecItemNotFound:
             return nil
+        default:
+            throw WMSError.persistenceFailed(
+                "Unable to read the encryption key from the Keychain (status: \(status)). Unlock the keychain and try again."
+            )
         }
-        return SymmetricKey(data: data)
     }
 
     private func storeKeyInKeychain(_ key: SymmetricKey) throws {
@@ -69,7 +91,7 @@ public final class KeychainDataProtector: @unchecked Sendable, DataProtection {
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else {
-            throw WMSError.validationError("Failed to store encryption key in Keychain (status: \(status)).")
+            throw WMSError.persistenceFailed("Failed to store encryption key in Keychain (status: \(status)).")
         }
     }
 }

@@ -47,7 +47,12 @@ final class DependencyContainer {
 
         self.auditLogger = AuditLogger(repository: auditRepository)
         self.auditLogService = AuditLogService(repository: auditRepository)
-        self.inventoryAlertService = InventoryAlertService(alertRepository: alertRepository)
+        self.inventoryAlertService = InventoryAlertService(
+            alertRepository: alertRepository,
+            alertCallback: { title, message in
+                NotificationManager.shared.postAlert(title: title, message: message)
+            }
+        )
 
         self.inventoryService = InventoryService(
             itemRepository: inventoryItemRepository,
@@ -69,7 +74,6 @@ final class DependencyContainer {
         )
         self.transferService = TransferService(
             transferRepository: transferOrderRepository,
-            itemRepository: inventoryItemRepository,
             auditLogger: auditLogger,
             accessController: accessController
         )

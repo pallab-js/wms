@@ -11,9 +11,11 @@ public final class DashboardViewModel {
     var lastRefreshDate: Date?
 
     private let service: DashboardService
+    private let alertService: InventoryAlertService
 
-    public init(service: DashboardService) {
+    public init(service: DashboardService, alertService: InventoryAlertService) {
         self.service = service
+        self.alertService = alertService
     }
 
     public func loadDashboard() async {
@@ -30,5 +32,14 @@ public final class DashboardViewModel {
 
     public func refresh() async {
         await loadDashboard()
+    }
+
+    public func acknowledgeAlert(id: UUID) async {
+        do {
+            try await alertService.acknowledgeAlert(id: id)
+            await loadDashboard()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

@@ -4,10 +4,18 @@ import WMSCore
 @Observable
 @MainActor
 public final class SettingsViewModel {
-    var organisationName: String = ""
-    var defaultUnitOfMeasure: String = "units"
+    var organisationName: String = "" {
+        didSet { savedMessage = nil }
+    }
+    var defaultUnitOfMeasure: String = "units" {
+        didSet { savedMessage = nil }
+    }
     public var currentUserRole: UserRole = .inventoryClerk {
-        didSet { onRoleChanged?(currentUserRole) }
+        didSet {
+            userDefaults.set(currentUserRole.rawValue, forKey: Keys.currentUserRole)
+            savedMessage = nil
+            onRoleChanged?(currentUserRole)
+        }
     }
     var savedMessage: String?
 

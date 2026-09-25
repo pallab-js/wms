@@ -7,6 +7,9 @@ import WMSServices
 public final class GlobalSearchViewModel {
     var query: String = "" {
         didSet {
+            if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                isSearching = true
+            }
             Task { await performSearch() }
         }
     }
@@ -38,23 +41,24 @@ public final class GlobalSearchViewModel {
         searchTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
+            isSearching = false
             clearResults()
             return
         }
 
+        let lowerQuery = trimmed.lowercased()
+        isSearching = true
         searchTask = Task {
-            isSearching = true
-            let lowerQuery = trimmed.lowercased()
+            let foundWarehouses = await self.searchWarehouses(query: lowerQuery)
+            let foundInventory = await self.searchInventory(query: lowerQuery)
+            let foundEmployees = await self.searchEmployees(query: lowerQuery)
 
-            async let warehousesTask = searchWarehouses(query: lowerQuery)
-            async let inventoryTask = searchInventory(query: lowerQuery)
-            async let employeesTask = searchEmployees(query: lowerQuery)
+            guard !Task.isCancelled else { return }
 
-            warehouseResults = await warehousesTask
-            inventoryResults = await inventoryTask
-            employeeResults = await employeesTask
-
-            isSearching = false
+            self.warehouseResults = foundWarehouses
+            self.inventoryResults = foundInventory
+            self.employeeResults = foundEmployees
+            self.isSearching = false
         }
     }
 
@@ -62,6 +66,7 @@ public final class GlobalSearchViewModel {
         warehouseResults = []
         inventoryResults = []
         employeeResults = []
+        isSearching = false
     }
 
     private func searchWarehouses(query: String) async -> [Warehouse] {

@@ -44,7 +44,10 @@ struct ContentView: View {
                     warehouseService: container.warehouseService
                 )
             case .reports:
-                DashboardContent(viewModel: DashboardViewModel(service: container.dashboardService))
+                DashboardContent(viewModel: DashboardViewModel(
+                    service: container.dashboardService,
+                    alertService: container.inventoryAlertService
+                ))
             case .auditLog:
                 AuditLogContent(viewModel: AuditLogViewModel(service: container.auditLogService))
             case .settings:

@@ -18,16 +18,21 @@ public final class FileAlertRepository: AlertRepository {
     }
 
     public func save(_ alert: AlertRecord) async throws {
-        var alerts: [AlertRecord] = try store.load([AlertRecord].self, file: file)
-        alerts.append(alert)
-        try store.save(alerts, file: file)
+        try store.atomicWrite { store in
+            var alerts: [AlertRecord] = try store.loadUnsafe([AlertRecord].self, file: self.file)
+            alerts.append(alert)
+            try store.saveUnsafe(alerts, file: self.file)
+        }
     }
 
     public func acknowledge(id: UUID) async throws {
-        var alerts: [AlertRecord] = try store.load([AlertRecord].self, file: file)
-        if let index = alerts.firstIndex(where: { $0.id == id }) {
+        try store.atomicWrite { store in
+            var alerts: [AlertRecord] = try store.loadUnsafe([AlertRecord].self, file: self.file)
+            guard let index = alerts.firstIndex(where: { $0.id == id }) else {
+                throw WMSError.validationError("Alert not found.")
+            }
             alerts[index].isAcknowledged = true
+            try store.saveUnsafe(alerts, file: self.file)
         }
-        try store.save(alerts, file: file)
     }
 }

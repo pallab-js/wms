@@ -205,6 +205,13 @@ public struct DashboardView: View {
                     .foregroundColor(.wmsTextSecondary)
             }
             Spacer()
+            Button {
+                Task { await viewModel.refresh() }
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .accessibilityLabel("Refresh dashboard")
+            .disabled(viewModel.isLoading)
             if viewModel.isLoading {
                 HStack(spacing: 8) {
                     ProgressView()
@@ -307,6 +314,13 @@ public struct DashboardView: View {
             Text(alert.createdAt.formatted(date: .abbreviated, time: .shortened))
                 .font(.wmsCaption)
                 .foregroundColor(.wmsTextTertiary)
+
+            Button("Acknowledge") {
+                Task { await viewModel.acknowledgeAlert(id: alert.id) }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Acknowledge alert: \(alert.message)")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

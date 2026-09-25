@@ -20,6 +20,7 @@ public struct EmployeeListView: View {
     @State private var notes = ""
     @State private var showSuccessToast = false
     @State private var successMessage = ""
+    @State private var selection = Set<Employee.ID>()
 
     public init(viewModel: EmployeeListViewModel) {
         self.viewModel = viewModel
@@ -36,7 +37,7 @@ public struct EmployeeListView: View {
                     description: Text("Add employees to get started.")
                 )
             } else {
-                Table(viewModel.employees) {
+                Table(viewModel.employees, selection: $selection) {
                     TableColumn("Code") { employee in
                         Text(employee.employeeCode)
                             .font(.wmsMonospace)
@@ -120,11 +121,10 @@ public struct EmployeeListView: View {
                             email: email, phone: phone,
                             hireDate: hireDate, notes: notes
                         )
+                        guard viewModel.errorMessage == nil else { return }
                         showCreateSheet = false
-                        if viewModel.errorMessage == nil {
-                            successMessage = "Employee created"
-                            showSuccessToast = true
-                        }
+                        successMessage = "Employee created"
+                        showSuccessToast = true
                     }
                 },
                 onCancel: { showCreateSheet = false }
@@ -149,11 +149,10 @@ public struct EmployeeListView: View {
                         updated.hireDate = hireDate
                         updated.notes = notes
                         await viewModel.updateEmployee(updated)
+                        guard viewModel.errorMessage == nil else { return }
                         editingEmployee = nil
-                        if viewModel.errorMessage == nil {
-                            successMessage = "Employee updated"
-                            showSuccessToast = true
-                        }
+                        successMessage = "Employee updated"
+                        showSuccessToast = true
                     }
                 },
                 onCancel: { editingEmployee = nil }

@@ -51,14 +51,18 @@ public final class InventoryService: Sendable {
         try accessController.require(.recordStockIn)
         try InputValidator.requireNotEmpty(sku, field: "SKU")
         try InputValidator.requireNotEmpty(name, field: "Name")
+        try InputValidator.requireNonNegativeInt(currentQuantity, field: "Quantity")
+        try InputValidator.requireNonNegativeInt(minimumThreshold, field: "Threshold")
+        try InputValidator.requireNonNegativeDouble(unitCost, field: "Unit cost")
 
-        let existing = try await itemRepository.fetch(bySKU: sku, inWarehouseID: warehouseID)
+        let trimmedSKU = sku.trimmingCharacters(in: .whitespacesAndNewlines)
+        let existing = try await itemRepository.fetch(bySKU: trimmedSKU, inWarehouseID: warehouseID)
         if existing != nil {
-            throw WMSError.duplicateSKU(sku)
+            throw WMSError.duplicateSKU(trimmedSKU)
         }
 
         let item = InventoryItem(
-            sku: sku.trimmingCharacters(in: .whitespacesAndNewlines),
+            sku: trimmedSKU,
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             description: description,
             category: category,
@@ -70,17 +74,59 @@ public final class InventoryService: Sendable {
         )
         try await itemRepository.save(item)
         await auditLogger.log(entityType: "InventoryItem", entityID: item.id, action: "created")
+        await alertService.checkThresholds(for: item)
         return item
     }
 
     public func updateItem(_ item: InventoryItem) async throws {
         try accessController.require(.editInventoryItem)
         try InputValidator.requireNotEmpty(item.sku, field: "SKU")
+        try InputValidator.requireNotEmpty(item.name, field: "Name")
+        try InputValidator.requireNonNegativeInt(item.currentQuantity, field: "Quantity")
+        try InputValidator.requireNonNegativeInt(item.minimumThreshold, field: "Threshold")
+        try InputValidator.requireNonNegativeDouble(item.unitCost, field: "Unit cost")
+
+        let trimmedSKU = item.sku.trimmingCharacters(in: .whitespacesAndNewlines)
+        let existing = try await getItem(byID: item.id)
+        if let duplicate = try await itemRepository.fetch(bySKU: trimmedSKU, inWarehouseID: existing.warehouseID),
+           duplicate.id != item.id {
+            throw WMSError.duplicateSKU(trimmedSKU)
+        }
+
         var updated = item
-        updated.sku = item.sku.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.sku = trimmedSKU
         updated.name = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
         updated.updatedAt = Date()
-        try await itemRepository.save(updated)
+
+        if updated.currentQuantity == existing.currentQuantity {
+            updated.warehouseID = existing.warehouseID
+            try await itemRepository.save(updated)
+        } else {
+            let movement = StockMovement(
+                movementType: .adjustment,
+                quantity: updated.currentQuantity,
+                note: "Quantity edited on inventory item",
+                referenceNumber: nil,
+                itemID: item.id,
+                warehouseID: existing.warehouseID
+            )
+            let target = updated
+            let (applied, _) = try await itemRepository.applyMovement(itemID: item.id) { stored in
+                stored.sku = target.sku
+                stored.name = target.name
+                stored.description = target.description
+                stored.category = target.category
+                stored.unitOfMeasure = target.unitOfMeasure
+                stored.minimumThreshold = target.minimumThreshold
+                stored.unitCost = target.unitCost
+                stored.isActive = target.isActive
+                stored.currentQuantity = target.currentQuantity
+                stored.updatedAt = target.updatedAt
+                return movement
+            }
+            updated = applied
+            await alertService.checkThresholds(for: updated)
+        }
         await auditLogger.log(entityType: "InventoryItem", entityID: item.id, action: "updated")
     }
 
@@ -108,38 +154,38 @@ public final class InventoryService: Sendable {
             throw WMSError.validationError("Quantity must be greater than zero.")
         }
 
-        var item = try await getItem(byID: itemID)
-
-        switch type {
-        case .stockOut:
-            guard item.currentQuantity >= quantity else {
-                throw WMSError.insufficientStock(
-                    itemName: item.name,
-                    available: item.currentQuantity,
-                    requested: quantity
-                )
+        let (item, movement) = try await itemRepository.applyMovement(itemID: itemID) { item in
+            switch type {
+            case .stockOut:
+                guard item.currentQuantity >= quantity else {
+                    throw WMSError.insufficientStock(
+                        itemName: item.name,
+                        available: item.currentQuantity,
+                        requested: quantity
+                    )
+                }
+                item.currentQuantity -= quantity
+            case .stockIn:
+                let (newValue, overflow) = item.currentQuantity.addingReportingOverflow(quantity)
+                guard !overflow else {
+                    throw WMSError.validationError("Quantity would exceed the maximum supported value.")
+                }
+                item.currentQuantity = newValue
+            case .adjustment:
+                item.currentQuantity = quantity
             }
-            item.currentQuantity -= quantity
-        case .stockIn:
-            item.currentQuantity += quantity
-        case .adjustment:
-            item.currentQuantity = quantity
+            item.updatedAt = Date()
+            return StockMovement(
+                movementType: type,
+                quantity: quantity,
+                note: note,
+                referenceNumber: referenceNumber,
+                itemID: itemID,
+                warehouseID: item.warehouseID
+            )
         }
 
-        item.updatedAt = Date()
-
-        let movement = StockMovement(
-            movementType: type,
-            quantity: quantity,
-            note: note,
-            referenceNumber: referenceNumber,
-            itemID: itemID,
-            warehouseID: item.warehouseID
-        )
-
-        try await itemRepository.saveWithMovement(item, movement: movement)
         await auditLogger.log(entityType: "StockMovement", entityID: movement.id, action: "recorded")
-
         await alertService.checkThresholds(for: item)
 
         return movement

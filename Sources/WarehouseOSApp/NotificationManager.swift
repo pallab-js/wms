@@ -27,22 +27,29 @@ public final class NotificationManager: Sendable {
     }
 
     public func postLowStockAlert(itemName: String, sku: String, currentQuantity: Int, threshold: Int, itemID: UUID) {
+        postAlert(
+            title: "Low Stock Alert",
+            message: "\(itemName) (SKU: \(sku)) is below minimum threshold. Current: \(currentQuantity), Threshold: \(threshold)."
+        )
+    }
+
+    public func postAlert(title: String, message: String) {
         guard isAvailable else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Low Stock Alert"
-        content.body = "\(itemName) (SKU: \(sku)) is below minimum threshold. Current: \(currentQuantity), Threshold: \(threshold)."
+        content.title = title
+        content.body = message
         content.sound = .default
         content.categoryIdentifier = "LOW_STOCK"
 
         let request = UNNotificationRequest(
-            identifier: "low-stock-\(itemID.uuidString)",
+            identifier: "alert-\(title)-\(message)".stableHash,
             content: content,
             trigger: nil
         )
 
         UNUserNotificationCenter.current().add(request) { error in
             if let error {
-                logger.error("Failed to post low stock notification: \(error, privacy: .public)")
+                logger.error("Failed to post notification: \(error, privacy: .public)")
             }
         }
     }
@@ -75,5 +82,13 @@ public final class NotificationManager: Sendable {
     public func clearAllNotifications() {
         guard isAvailable else { return }
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    }
+}
+
+private extension String {
+    var stableHash: String {
+        var value: UInt64 = 5381
+        for byte in utf8 { value = value &* 33 &+ UInt64(byte) }
+        return String(value, radix: 16)
     }
 }

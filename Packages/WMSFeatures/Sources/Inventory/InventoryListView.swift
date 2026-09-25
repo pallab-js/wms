@@ -24,6 +24,7 @@ public struct InventoryListView: View {
     @State private var showSuccessToast = false
     @State private var successMessage = ""
     @State private var showNoWarehouseAlert = false
+    @State private var selection = Set<InventoryItem.ID>()
 
     public init(viewModel: InventoryListViewModel, warehouses: Binding<[Warehouse]>) {
         self.viewModel = viewModel
@@ -41,7 +42,7 @@ public struct InventoryListView: View {
                     description: Text("Add inventory items to get started.")
                 )
             } else {
-                Table(viewModel.items) {
+                Table(viewModel.items, selection: $selection) {
                     TableColumn("SKU") { item in
                         Text(item.sku)
                             .font(.wmsMonospace)
@@ -128,11 +129,10 @@ public struct InventoryListView: View {
                             unitCost: Double(unitCost) ?? 0,
                             warehouseID: selectedWarehouseID ?? warehouses.first?.id ?? UUID()
                         )
+                        guard viewModel.errorMessage == nil else { return }
                         showCreateSheet = false
-                        if viewModel.errorMessage == nil {
-                            successMessage = "Item created"
-                            showSuccessToast = true
-                        }
+                        successMessage = "Item created"
+                        showSuccessToast = true
                     }
                 },
                 onCancel: { showCreateSheet = false }
@@ -160,11 +160,10 @@ public struct InventoryListView: View {
                         updated.warehouseID = selectedWarehouseID ?? item.warehouseID
                         updated.updatedAt = Date()
                         await viewModel.updateItem(updated)
+                        guard viewModel.errorMessage == nil else { return }
                         editingItem = nil
-                        if viewModel.errorMessage == nil {
-                            successMessage = "Item updated"
-                            showSuccessToast = true
-                        }
+                        successMessage = "Item updated"
+                        showSuccessToast = true
                     }
                 },
                 onCancel: { editingItem = nil }

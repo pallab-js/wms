@@ -6,6 +6,7 @@ public struct WarehouseDetailView: View {
     let warehouse: Warehouse
     let onSave: (Warehouse) -> Void
 
+    @State private var current: Warehouse
     @State private var showEditSheet = false
     @State private var editName = ""
     @State private var editCode = ""
@@ -15,6 +16,7 @@ public struct WarehouseDetailView: View {
     public init(warehouse: Warehouse, onSave: @escaping (Warehouse) -> Void) {
         self.warehouse = warehouse
         self.onSave = onSave
+        self._current = State(initialValue: warehouse)
     }
 
     public var body: some View {
@@ -22,20 +24,13 @@ public struct WarehouseDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(warehouse.name)
+                        Text(current.name)
                             .font(.wmsLargeTitle)
-                        Text(warehouse.code)
+                        Text(current.code)
                             .font(.wmsMonospace)
                             .foregroundColor(.wmsTextSecondary)
                     }
                     Spacer()
-                    Button("Edit") {
-                        editName = warehouse.name
-                        editCode = warehouse.code
-                        editAddress = warehouse.address
-                        editCapacity = "\(warehouse.capacity)"
-                        showEditSheet = true
-                    }
                 }
 
                 Divider()
@@ -45,30 +40,30 @@ public struct WarehouseDetailView: View {
                         GridRow {
                             Text("Address")
                                 .foregroundColor(.wmsTextSecondary)
-                            Text(warehouse.address)
+                            Text(current.address)
                         }
                         GridRow {
                             Text("Capacity")
                                 .foregroundColor(.wmsTextSecondary)
-                            Text("\(warehouse.capacity) units")
+                            Text("\(current.capacity) units")
                         }
                         GridRow {
                             Text("Status")
                                 .foregroundColor(.wmsTextSecondary)
                             WMSBadge(
-                                text: warehouse.isActive ? "Active" : "Inactive",
-                                color: warehouse.isActive ? .wmsSuccess : .wmsTextSecondary
+                                text: current.isActive ? "Active" : "Inactive",
+                                color: current.isActive ? .wmsSuccess : .wmsTextSecondary
                             )
                         }
                         GridRow {
                             Text("Created")
                                 .foregroundColor(.wmsTextSecondary)
-                            Text(warehouse.createdAt.formatted(date: .abbreviated, time: .shortened))
+                            Text(current.createdAt.formatted(date: .abbreviated, time: .shortened))
                         }
                         GridRow {
                             Text("Updated")
                                 .foregroundColor(.wmsTextSecondary)
-                            Text(warehouse.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                            Text(current.updatedAt.formatted(date: .abbreviated, time: .shortened))
                         }
                     }
                     .padding(.vertical, 4)
@@ -76,14 +71,14 @@ public struct WarehouseDetailView: View {
             }
             .padding()
         }
-        .navigationTitle(warehouse.name)
+        .navigationTitle(current.name)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Edit") {
-                    editName = warehouse.name
-                    editCode = warehouse.code
-                    editAddress = warehouse.address
-                    editCapacity = "\(warehouse.capacity)"
+                    editName = current.name
+                    editCode = current.code
+                    editAddress = current.address
+                    editCapacity = "\(current.capacity)"
                     showEditSheet = true
                 }
             }
@@ -96,12 +91,13 @@ public struct WarehouseDetailView: View {
                 address: $editAddress,
                 capacity: $editCapacity,
                 onSave: {
-                    var updated = warehouse
+                    var updated = current
                     updated.name = editName
                     updated.code = editCode
                     updated.address = editAddress
                     updated.capacity = Int(editCapacity) ?? 0
                     updated.updatedAt = Date()
+                    current = updated
                     onSave(updated)
                     showEditSheet = false
                 },

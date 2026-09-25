@@ -4,9 +4,18 @@ import Foundation
 @testable import WMSServices
 
 final class WarehouseServiceTests: XCTestCase {
+    private func makeService(repository: MockWarehouseRepository) -> WarehouseService {
+        let inventoryService = InventoryService(
+            itemRepository: MockInventoryItemRepository(),
+            movementRepository: MockStockMovementRepository(),
+            alertService: InventoryAlertService(alertRepository: MockAlertRepository())
+        )
+        return WarehouseService(repository: repository, inventoryService: inventoryService)
+    }
+
     func testCreateWarehouse_validInput_succeeds() async throws {
         let repo = MockWarehouseRepository()
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
 
         let warehouse = try await service.createWarehouse(
             name: "Test Warehouse",
@@ -23,7 +32,7 @@ final class WarehouseServiceTests: XCTestCase {
     func testCreateWarehouse_duplicateCode_throws() async throws {
         let repo = MockWarehouseRepository()
         repo.warehouses = [Warehouse(name: "Existing", code: "WH-001", address: "", capacity: 100)]
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
 
         do {
             _ = try await service.createWarehouse(name: "New", code: "WH-001", address: "", capacity: 100)
@@ -35,7 +44,7 @@ final class WarehouseServiceTests: XCTestCase {
 
     func testCreateWarehouse_emptyName_throws() async throws {
         let repo = MockWarehouseRepository()
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
 
         do {
             _ = try await service.createWarehouse(name: "", code: "WH-001", address: "", capacity: 100)
@@ -47,7 +56,7 @@ final class WarehouseServiceTests: XCTestCase {
 
     func testCreateWarehouse_zeroCapacity_throws() async throws {
         let repo = MockWarehouseRepository()
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
 
         do {
             _ = try await service.createWarehouse(name: "Test", code: "WH-001", address: "", capacity: 0)
@@ -59,7 +68,7 @@ final class WarehouseServiceTests: XCTestCase {
 
     func testGetWarehouse_notFound_throws() async throws {
         let repo = MockWarehouseRepository()
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
 
         do {
             _ = try await service.getWarehouse(byID: UUID())
@@ -73,7 +82,7 @@ final class WarehouseServiceTests: XCTestCase {
         let repo = MockWarehouseRepository()
         let id = UUID()
         repo.warehouses = [Warehouse(id: id, name: "Test", code: "WH-001", address: "", capacity: 100)]
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
 
         try await service.deactivateWarehouse(id: id)
 
@@ -84,7 +93,7 @@ final class WarehouseServiceTests: XCTestCase {
         let repo = MockWarehouseRepository()
         let id = UUID()
         repo.warehouses = [Warehouse(id: id, name: "Test", code: "WH-001", address: "", capacity: 100)]
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
 
         try await service.deleteWarehouse(id: id)
 
@@ -93,7 +102,7 @@ final class WarehouseServiceTests: XCTestCase {
 
     func testGetTotalWarehouseCount_onlyActive() async throws {
         let repo = MockWarehouseRepository()
-        let service = WarehouseService(repository: repo)
+        let service = makeService(repository: repo)
         repo.warehouses = [
             Warehouse(name: "A", code: "WH-A", address: "", capacity: 100, isActive: true),
             Warehouse(name: "B", code: "WH-B", address: "", capacity: 100, isActive: false),

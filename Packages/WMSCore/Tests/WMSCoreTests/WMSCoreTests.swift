@@ -19,10 +19,19 @@ final class WMSCoreTests: XCTestCase {
 
     func testWarehouse_equality_worksCorrectly() {
         let id = UUID()
-        let w1 = Warehouse(id: id, name: "A", code: "WH-001", address: "", capacity: 100)
-        let w2 = Warehouse(id: id, name: "B", code: "WH-002", address: "", capacity: 200)
+        let timestamp = Date()
+        func makeWarehouse(name: String, code: String, capacity: Int) -> Warehouse {
+            Warehouse(
+                id: id, name: name, code: code, address: "", capacity: capacity,
+                createdAt: timestamp, updatedAt: timestamp
+            )
+        }
+        let w1 = makeWarehouse(name: "A", code: "WH-001", capacity: 100)
+        let w2 = makeWarehouse(name: "A", code: "WH-001", capacity: 100)
+        let edited = makeWarehouse(name: "B", code: "WH-002", capacity: 200)
 
-        XCTAssertEqual(w1, w2)
+        XCTAssertEqual(w1, w2, "Identical warehouses should be equal")
+        XCTAssertNotEqual(w1, edited, "A changed warehouse should not compare equal")
     }
 
     func testInventoryItem_init_setsDefaultValues() {

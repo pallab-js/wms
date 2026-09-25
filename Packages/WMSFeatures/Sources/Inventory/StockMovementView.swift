@@ -69,6 +69,13 @@ public struct StockMovementView: View {
                 }
                 .disabled(quantityValue == nil)
             }
+
+            if let error = viewModel.errorMessage {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.wmsCaption)
+                    .foregroundColor(.wmsDestructive)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding()
         .frame(width: 400, height: 380)
@@ -79,6 +86,7 @@ public struct StockMovementView: View {
             Button("Record \(movementTypeLabel)") {
                 guard let qty = quantityValue else { return }
                 Task {
+                    viewModel.errorMessage = nil
                     await viewModel.recordMovement(
                         itemID: item.id,
                         type: movementType,
@@ -86,6 +94,7 @@ public struct StockMovementView: View {
                         note: note.isEmpty ? nil : note,
                         referenceNumber: referenceNumber.isEmpty ? nil : referenceNumber
                     )
+                    guard viewModel.errorMessage == nil else { return }
                     dismiss()
                 }
             }
