@@ -35,7 +35,13 @@ jobs:
             ${{ runner.os }}-spm-
 
       - name: SwiftLint
-        run: swiftlint --strict
+        run: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            brew install swiftlint
+          fi
+          swiftlint version
+          swiftlint --strict
 
       - name: Build
         run: swift build
