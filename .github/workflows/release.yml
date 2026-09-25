@@ -5,14 +5,26 @@ on:
     tags:
       - 'v*.*.*'
 
-env:
-  DEVELOPER_DIR: /Applications/Xcode_16.app
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-and-release:
+    name: Lint, test, package, release
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d /Applications/Xcode_16.2.app ]; then
+            echo "DEVELOPER_DIR=/Applications/Xcode_16.2.app" >> "$GITHUB_ENV"
+          fi
+          xcodebuild -version
 
       - name: Cache SPM
         uses: actions/cache@v4
@@ -22,12 +34,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
-      - name: Build Release
+      - name: SwiftLint
+        run: swiftlint --strict
+
+      - name: Build
+        run: swift build
+
+      - name: Test (root + package suites)
+        run: ./Scripts/run-tests.sh
+
+      - name: Build release
         run: swift build -c release
+
+      - name: Package .app
+        run: ./Scripts/package-app.sh "$GITHUB_REF_NAME"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            .build/release/WarehouseOS
+          files: dist/*.zip
           generate_release_notes: true
+          fail_on_unmatched_files: true

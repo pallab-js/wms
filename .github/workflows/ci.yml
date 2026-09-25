@@ -2,18 +2,28 @@ name: CI
 
 on:
   push:
-    branches: [develop]
+    branches: [main, develop]
   pull_request:
-    branches: [develop, main]
+    branches: [main, develop]
+  workflow_dispatch:
 
-env:
-  DEVELOPER_DIR: /Applications/Xcode_16.app
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
+    name: Lint, build, test
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d /Applications/Xcode_16.2.app ]; then
+            echo "DEVELOPER_DIR=/Applications/Xcode_16.2.app" >> "$GITHUB_ENV"
+          fi
+          xcodebuild -version
 
       - name: Cache SPM
         uses: actions/cache@v4
@@ -29,5 +39,41 @@ jobs:
       - name: Build
         run: swift build
 
-      - name: Test
-        run: swift test
+      - name: Test (root + package suites)
+        run: ./Scripts/run-tests.sh
+
+  package:
+    name: Package release app
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-test
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d /Applications/Xcode_16.2.app ]; then
+            echo "DEVELOPER_DIR=/Applications/Xcode_16.2.app" >> "$GITHUB_ENV"
+          fi
+          xcodebuild -version
+
+      - name: Cache SPM
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Build release
+        run: swift build -c release
+
+      - name: Package .app
+        run: ./Scripts/package-app.sh "0.0.${{ github.run_number }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WarehouseOS-macos
+          path: dist/*.zip
+          retention-days: 7
