@@ -5,7 +5,8 @@ let package = Package(
     name: "WarehouseOS",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "WarehouseOS", targets: ["WarehouseOSApp"])
+        .executable(name: "WarehouseOS", targets: ["WarehouseOSApp"]),
+        .executable(name: "WMSSeed", targets: ["WMSSeed"])
     ],
     dependencies: [
         .package(path: "Packages/WMSCore"),
@@ -25,6 +26,15 @@ let package = Package(
                 "WMSDesignSystem"
             ],
             path: "Sources/WarehouseOSApp"
+        ),
+        .executableTarget(
+            name: "WMSSeed",
+            dependencies: [
+                "WMSCore",
+                "WMSData",
+                "WMSServices"
+            ],
+            path: "Sources/WMSSeed"
         ),
         .testTarget(
             name: "IntegrationTests",
