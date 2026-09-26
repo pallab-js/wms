@@ -1,109 +1,71 @@
 # WarehouseOS
 
-Enterprise-grade warehouse management for macOS. A standalone desktop application for managing multiple warehouses, inventory, employees, and transfer orders — built natively with Swift and SwiftUI.
+[![CI](https://github.com/pallab-js/wms/actions/workflows/ci.yml/badge.svg)](https://github.com/pallab-js/wms/actions/workflows/ci.yml)
+
+Native macOS warehouse management — inventory, warehouses, employees, and transfer orders. Built with Swift and SwiftUI; no server, no database.
 
 ## Features
 
-- **Multi-warehouse management** — Create, configure, and monitor warehouses with capacity tracking
-- **Inventory catalogue** — SKU management with categories, units of measure, and cost tracking
-- **Stock movements** — Atomic stock-in, stock-out, and adjustment recording with full audit trail
-- **Transfer orders** — Multi-step workflow (Draft → Submitted → Approved → In Transit → Completed) with stock validation
-- **Employee management** — Profiles with warehouse assignments and role-based access
-- **Dashboard** — Real-time KPIs, warehouse utilisation charts, and recent activity
-- **Audit log** — Immutable record of all mutations, filterable by entity type and action
-- **Global search** — Search across warehouses, inventory items, and employees (Cmd+F)
-- **Low-stock alerts** — Threshold monitoring with macOS notifications
-- **Input validation** — Client-side and server-side validation with clear error messages
-- **Accessibility** — Full VoiceOver support with accessibility labels on all controls
+- **Warehouses** — multiple sites with capacity tracking and utilisation metrics
+- **Inventory** — SKUs, categories, units of measure, cost tracking, and threshold-based low-stock alerts with macOS notifications
+- **Stock movements** — atomic stock-in, stock-out, and adjustments, each recorded in an immutable audit trail
+- **Transfer orders** — Draft → Submitted → Approved → In Transit → Completed, with stock validation and cancellation
+- **Employees** — profiles, activation state, and role-based permissions
+- **Dashboard, filterable audit log, and global search (⌘F)**
+- **Accessible** — VoiceOver labels on every control
 
 ## Requirements
 
-- macOS 14.0 Sonoma or later (Apple Silicon optimised)
-- Swift 5.10+
+- macOS 14.0 or later
+- Swift 5.10 (Xcode 15.4+) or later
+- [SwiftLint](https://github.com/realm/SwiftLint) for the lint step
 
-## Quick Start
+## Getting started
 
 ```bash
-# Clone the repository
 git clone https://github.com/pallab-js/wms.git
 cd wms
 
-# Build and run
 swift build
-swift run WarehouseOS
+swift run WarehouseOS   # launch the app
+swift run WMSSeed       # optional: load demo data
 ```
+
+`WMSSeed` writes a demo dataset (3 warehouses, 15 SKUs, 6 employees, one transfer per workflow state) through the normal services, so validation, audit entries, alerts, and encryption behave exactly as they do in the app. It skips an already-populated store; use `--reset` to wipe and reseed, or `--dir <path>` to seed a scratch directory.
+
+## Commands
+
+| Task | Command |
+|---|---|
+| Build | `swift build` |
+| Run the app | `swift run WarehouseOS` |
+| Seed demo data | `swift run WMSSeed` |
+| Run all tests (116) | `./Scripts/run-tests.sh` |
+| Run integration tests only | `swift test` |
+| Lint | `swiftlint --strict` |
 
 ## Architecture
 
-WarehouseOS follows a strict **MVVM + Repository + Service Layer** architecture with local Swift packages:
-
-```
-┌─────────────────────────────────┐
-│        SwiftUI Views            │
-│   (Declarative UI, no logic)    │
-└──────────────┬──────────────────┘
-               │ @StateObject
-┌──────────────▼──────────────────┐
-│         ViewModels              │
-│  (State, validation, UI logic)  │
-└──────────────┬──────────────────┘
-               │ Protocol calls
-┌──────────────▼──────────────────┐
-│        Service Layer            │
-│  (Business rules, orchestration)│
-└──────────────┬──────────────────┘
-               │ Repository protocol
-┌──────────────▼──────────────────┐
-│       Repository Layer          │
-│  (Abstracts persistence)        │
-└──────────────┬──────────────────┘
-               │
-┌──────────────▼──────────────────┐
-│     File-based JSON Storage     │
-└─────────────────────────────────┘
-```
+Strict MVVM with a service and repository layer: **views → view models → services (business rules, validation, audit) → repositories → JSON on disk**. Each layer talks only to protocols declared in `WMSCore`.
 
 | Package | Purpose |
 |---|---|
-| `WMSCore` | Domain models, protocols, business rules, validators |
-| `WMSData` | File-based persistence with atomic writes |
-| `WMSServices` | Service layer with business logic and audit logging |
-| `WMSFeatures` | Feature-specific ViewModels and SwiftUI views |
-| `WMSDesignSystem` | Reusable UI components, typography, and colour tokens |
+| `WMSCore` | Domain models, repository and permission protocols, validation |
+| `WMSData` | Atomic file-based JSON persistence, Keychain encryption |
+| `WMSServices` | Business rules, stock and transfer workflows, audit logging |
+| `WMSFeatures` | ViewModels and SwiftUI screens |
+| `WMSDesignSystem` | Components, typography, and colour tokens |
 
-## Development
+`docs/` holds architecture and contributing notes; `specs/` holds feature specifications.
 
-```bash
-# Build
-swift build
+## Data
 
-# Run
-swift run WarehouseOS
+All records live in `~/Library/Application Support/WarehouseOS/*.json`, written atomically with `0600` permissions and encrypted with a key stored in the macOS Keychain.
 
-# Test
-swift test
+## Continuous integration
 
-# Lint
-swiftlint --strict
-```
-
-## Project Structure
-
-```
-wms/
-├── Sources/WarehouseOSApp/     # App entry point, DI, navigation
-├── Packages/
-│   ├── WMSCore/                # Domain models and protocols
-│   ├── WMSData/                # Persistence layer
-│   ├── WMSServices/            # Business logic
-│   ├── WMSFeatures/            # UI features
-│   └── WMSDesignSystem/        # Design tokens
-├── specs/                      # Feature specifications
-├── docs/                       # Architecture and contributing docs
-├── Scripts/                    # Dev tooling scripts
-└── .github/                    # CI workflows, templates
-```
+GitHub Actions runs on every push and pull request: SwiftLint, build, and all test suites. Pushes to `main` also publish a packaged `.app` artifact, and tags matching `v*.*.*` cut a GitHub Release containing the app zip.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
