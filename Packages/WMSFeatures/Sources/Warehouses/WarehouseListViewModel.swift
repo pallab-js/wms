@@ -54,9 +54,9 @@ public final class WarehouseListViewModel {
     var errorMessage: String?
     var validationErrors: [String] = []
     var selectedWarehouseID: UUID?
-    var searchText = ""
-    var sortOrder: WarehouseSortOrder = .name
-    var statusFilter: WarehouseStatusFilter = .all
+    public var searchText = ""
+    public var sortOrder: WarehouseSortOrder = .name
+    public var statusFilter: WarehouseStatusFilter = .all
 
     private let service: WarehouseService
     private let statsService: WarehouseStatsService
@@ -113,16 +113,42 @@ public final class WarehouseListViewModel {
         return result
     }
 
-    var activeCount: Int { warehouses.filter(\.isActive).count }
+    public struct KPI: Sendable, Equatable {
+        public let warehouseCount: Int
+        public let activeCount: Int
+        public let unitCount: Int
+        public let totalValue: Double
+        public let averageUtilisation: Double
 
-    var totalUnits: Int { stats.values.reduce(0) { $0 + $1.unitCount } }
+        public init(
+            warehouseCount: Int,
+            activeCount: Int,
+            unitCount: Int,
+            totalValue: Double,
+            averageUtilisation: Double
+        ) {
+            self.warehouseCount = warehouseCount
+            self.activeCount = activeCount
+            self.unitCount = unitCount
+            self.totalValue = totalValue
+            self.averageUtilisation = averageUtilisation
+        }
+    }
 
-    var totalValue: Double { stats.values.reduce(0) { $0 + $1.totalValue } }
-
-    var averageUtilisation: Double {
-        let utilisations = stats.values.map(\.utilisation).filter { $0 > 0 }
-        guard !utilisations.isEmpty else { return 0 }
-        return utilisations.reduce(0, +) / Double(utilisations.count)
+    public var kpi: KPI {
+        let visible = filteredWarehouses
+        let visibleStats = visible.compactMap { stats[$0.id] }
+        let utilisations = visibleStats.map(\.utilisation)
+        let averageUtilisation = utilisations.isEmpty
+            ? 0.0
+            : utilisations.reduce(0, +) / Double(utilisations.count)
+        return KPI(
+            warehouseCount: visible.count,
+            activeCount: visible.filter(\.isActive).count,
+            unitCount: visibleStats.reduce(0) { $0 + $1.unitCount },
+            totalValue: visibleStats.reduce(0.0) { $0 + $1.totalValue },
+            averageUtilisation: averageUtilisation
+        )
     }
 
     var hasActiveFilters: Bool {

@@ -14,6 +14,24 @@ public struct WarehouseFormView: View {
     @State private var validationErrors: [String] = []
     @State private var hasAttemptedSave = false
 
+    public init(
+        title: String,
+        name: Binding<String>,
+        code: Binding<String>,
+        address: Binding<String>,
+        capacity: Binding<String>,
+        onSave: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.title = title
+        self._name = name
+        self._code = code
+        self._address = address
+        self._capacity = capacity
+        self.onSave = onSave
+        self.onCancel = onCancel
+    }
+
     public var body: some View {
         VStack(spacing: 20) {
             Text(title)

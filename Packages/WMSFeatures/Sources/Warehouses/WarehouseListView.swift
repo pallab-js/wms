@@ -33,7 +33,7 @@ public struct WarehouseListView: View {
                 )
             } else {
                 VStack(spacing: 0) {
-                    summaryStrip
+                    summaryStrip(viewModel.kpi)
                     Divider()
                     if viewModel.filteredWarehouses.isEmpty {
                         ContentUnavailableView {
@@ -175,36 +175,36 @@ public struct WarehouseListView: View {
         .wmsToast(isPresented: $showSuccessToast, message: successMessage)
     }
 
-    private var summaryStrip: some View {
+    private func summaryStrip(_ kpi: WarehouseListViewModel.KPI) -> some View {
         HStack(spacing: 12) {
             WMSStatCard(
                 title: "Warehouses",
-                value: "\(viewModel.activeCount)",
+                value: "\(kpi.warehouseCount)",
                 icon: "building.2",
                 color: .wmsInfo,
-                subtitle: "\(viewModel.warehouses.count) total"
+                subtitle: "\(kpi.activeCount) active"
             )
             WMSStatCard(
                 title: "Units Stored",
-                value: viewModel.totalUnits.formatted(),
+                value: kpi.unitCount.formatted(),
                 icon: "shippingbox",
                 color: .wmsSuccess,
-                subtitle: "Across all sites"
+                subtitle: "On hand"
             )
             WMSStatCard(
                 title: "Inventory Value",
-                value: viewModel.totalValue.formatted(
+                value: kpi.totalValue.formatted(
                     .currency(code: "USD").precision(.fractionLength(0))
                 ),
                 icon: "dollarsign",
                 color: .wmsAccent,
-                subtitle: "Total stock value"
+                subtitle: "At unit cost"
             )
             WMSStatCard(
                 title: "Avg Utilisation",
-                value: "\(Int(viewModel.averageUtilisation))%",
+                value: "\(Int(kpi.averageUtilisation))%",
                 icon: "gauge",
-                color: utilisationColor(viewModel.averageUtilisation),
+                color: utilisationColor(kpi.averageUtilisation),
                 subtitle: "Capacity used"
             )
         }
