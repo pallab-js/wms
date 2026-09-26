@@ -16,7 +16,7 @@ jobs:
     name: Lint, build, test
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select Xcode
         run: |
@@ -26,7 +26,7 @@ jobs:
           xcodebuild -version
 
       - name: Cache SPM
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .build
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.swift') }}
@@ -54,7 +54,7 @@ jobs:
     needs: build-and-test
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select Xcode
         run: |
@@ -64,7 +64,7 @@ jobs:
           xcodebuild -version
 
       - name: Cache SPM
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .build
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.swift') }}
@@ -78,7 +78,7 @@ jobs:
         run: ./Scripts/package-app.sh "0.0.${{ github.run_number }}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: WarehouseOS-macos
           path: dist/*.zip
