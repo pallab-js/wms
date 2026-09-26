@@ -1,7 +1,6 @@
 import SwiftUI
 import WMSFeatures
 
-@main
 struct WarehouseOSApp: App {
     let container: DependencyContainer
 

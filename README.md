@@ -27,11 +27,11 @@ git clone https://github.com/pallab-js/wms.git
 cd wms
 
 swift build
-swift run WarehouseOS   # launch the app
-swift run WMSSeed       # optional: load demo data
+swift run WarehouseOS           # launch the app
+swift run WarehouseOS --seed    # optional: load demo data
 ```
 
-`WMSSeed` writes a demo dataset (3 warehouses, 15 SKUs, 6 employees, one transfer per workflow state) through the normal services, so validation, audit entries, alerts, and encryption behave exactly as they do in the app. It skips an already-populated store; use `--reset` to wipe and reseed, or `--dir <path>` to seed a scratch directory.
+`--seed` writes a demo dataset (3 warehouses, 15 SKUs, 6 employees, one transfer per workflow state) through the normal services, so validation, audit entries, alerts, and encryption behave exactly as they do in the app. It skips an already-populated store; use `--reset` to wipe and reseed, or `--dir <path>` to seed a scratch directory.
 
 ## Commands
 
@@ -39,7 +39,7 @@ swift run WMSSeed       # optional: load demo data
 |---|---|
 | Build | `swift build` |
 | Run the app | `swift run WarehouseOS` |
-| Seed demo data | `swift run WMSSeed` |
+| Seed demo data | `swift run WarehouseOS --seed` |
 | Run all tests (116) | `./Scripts/run-tests.sh` |
 | Run integration tests only | `swift test` |
 | Lint | `swiftlint --strict` |

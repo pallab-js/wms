@@ -3,45 +3,41 @@ import WMSCore
 import WMSData
 import WMSServices
 
-@main
-struct WMSSeed {
-    static func main() async {
-        let arguments = Array(CommandLine.arguments.dropFirst())
-        if arguments.contains("--help") || arguments.contains("-h") {
-            print(usageText)
-            return
-        }
-
+enum SeedCommand {
+    static func run(arguments: [String]) async -> Int32 {
         var reset = false
         var customDirectory: String?
         var index = 0
         while index < arguments.count {
             let argument = arguments[index]
             switch argument {
+            case "--seed":
+                index += 1
             case "--reset":
                 reset = true
                 index += 1
             case "--dir":
                 index += 1
                 guard index < arguments.count else {
-                    exitWithMessage("--dir requires a directory path.")
+                    return fail("--dir requires a directory path.")
                 }
                 customDirectory = arguments[index]
                 index += 1
             default:
-                exitWithMessage("Unknown option: \(argument)\n\n\(usageText)")
+                return fail("Unknown option: \(argument)\n\n\(usageText)")
             }
         }
 
         let baseURL = customDirectory.map { URL(fileURLWithPath: $0, isDirectory: true) }
         do {
-            try await run(baseURL: baseURL, reset: reset)
+            try await load(baseURL: baseURL, reset: reset)
+            return 0
         } catch {
-            exitWithMessage("Seeding failed: \(error)")
+            return fail("Seeding failed: \(error)")
         }
     }
 
-    static func run(baseURL: URL?, reset: Bool) async throws {
+    static func load(baseURL: URL?, reset: Bool) async throws {
         let directory = baseURL ?? defaultDirectory()
         print("Data directory: \(directory.path)")
 
@@ -117,21 +113,22 @@ struct WMSSeed {
         return dataFiles.count
     }
 
-    private static func exitWithMessage(_ message: String) -> Never {
+    private static func fail(_ message: String) -> Int32 {
         FileHandle.standardError.write(Data("\(message)\n".utf8))
-        exit(1)
+        return 1
     }
 
-    private static let usageText = """
-    Usage: swift run WMSSeed [--dir <path>] [--reset]
+    static let usageText = """
+    Usage: swift run WarehouseOS --seed [--dir <path>] [--reset]
 
     Loads a full demo dataset (warehouses, employees, inventory, movements,
     transfers, audit entries and alerts) through the real services, so the data
     is encrypted exactly like the app writes it.
 
-      --dir <path>   Store data in <path> instead of the app's data directory.
-      --reset        Delete existing JSON data files before seeding.
-      -h, --help     Show this help.
+      --seed          Seed the demo dataset and exit.
+      --dir <path>    Store data in <path> instead of the app's data directory.
+      --reset         Delete existing JSON data files before seeding.
+      -h, --help      Show this help.
     """
 }
 
