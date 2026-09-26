@@ -2,30 +2,144 @@ import Foundation
 import WMSCore
 import WMSServices
 
+public enum WarehouseSortOrder: String, CaseIterable, Identifiable, Sendable {
+    case name
+    case code
+    case utilisation
+    case value
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .name: return "Name"
+        case .code: return "Code"
+        case .utilisation: return "Utilisation"
+        case .value: return "Inventory Value"
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .name: return "textformat"
+        case .code: return "number"
+        case .utilisation: return "gauge"
+        case .value: return "dollarsign"
+        }
+    }
+}
+
+public enum WarehouseStatusFilter: String, CaseIterable, Identifiable, Sendable {
+    case all
+    case active
+    case inactive
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .all: return "All"
+        case .active: return "Active"
+        case .inactive: return "Inactive"
+        }
+    }
+}
+
 @Observable
 @MainActor
 public final class WarehouseListViewModel {
     var warehouses: [Warehouse] = []
+    var stats: [UUID: WarehouseStats] = [:]
     var isLoading = false
     var errorMessage: String?
     var validationErrors: [String] = []
     var selectedWarehouseID: UUID?
+    var searchText = ""
+    var sortOrder: WarehouseSortOrder = .name
+    var statusFilter: WarehouseStatusFilter = .all
 
     private let service: WarehouseService
+    private let statsService: WarehouseStatsService
 
-    public init(service: WarehouseService) {
+    public init(service: WarehouseService, statsService: WarehouseStatsService) {
         self.service = service
+        self.statsService = statsService
     }
 
     public func loadWarehouses() async {
         isLoading = true
         errorMessage = nil
         do {
-            warehouses = try await service.getAllWarehouses()
+            async let warehousesTask = service.getAllWarehouses()
+            async let statsTask = statsService.getAllStats()
+            warehouses = try await warehousesTask
+            stats = Dictionary(
+                uniqueKeysWithValues: try await statsTask.map { ($0.warehouseID, $0) }
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+    }
+
+    var filteredWarehouses: [Warehouse] {
+        var result = warehouses
+
+        switch statusFilter {
+        case .all: break
+        case .active: result = result.filter(\.isActive)
+        case .inactive: result = result.filter { !$0.isActive }
+        }
+
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            result = result.filter {
+                $0.name.localizedCaseInsensitiveContains(query)
+                    || $0.code.localizedCaseInsensitiveContains(query)
+            }
+        }
+
+        switch sortOrder {
+        case .name:
+            result.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .code:
+            result.sort { $0.code.localizedCaseInsensitiveCompare($1.code) == .orderedAscending }
+        case .utilisation:
+            result.sort { utilisation(of: $0) > utilisation(of: $1) }
+        case .value:
+            result.sort { (stats[$0.id]?.totalValue ?? 0) > (stats[$1.id]?.totalValue ?? 0) }
+        }
+
+        return result
+    }
+
+    var activeCount: Int { warehouses.filter(\.isActive).count }
+
+    var totalUnits: Int { stats.values.reduce(0) { $0 + $1.unitCount } }
+
+    var totalValue: Double { stats.values.reduce(0) { $0 + $1.totalValue } }
+
+    var averageUtilisation: Double {
+        let utilisations = stats.values.map(\.utilisation).filter { $0 > 0 }
+        guard !utilisations.isEmpty else { return 0 }
+        return utilisations.reduce(0, +) / Double(utilisations.count)
+    }
+
+    var hasActiveFilters: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || statusFilter != .all
+    }
+
+    func stats(for warehouse: Warehouse) -> WarehouseStats? {
+        stats[warehouse.id]
+    }
+
+    func clearFilters() {
+        searchText = ""
+        statusFilter = .all
+    }
+
+    private func utilisation(of warehouse: Warehouse) -> Double {
+        stats[warehouse.id]?.utilisation ?? 0
     }
 
     public func validateWarehouseForm(

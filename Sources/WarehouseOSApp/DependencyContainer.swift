@@ -25,6 +25,7 @@ final class DependencyContainer {
     let transferService: TransferService
     let dashboardService: DashboardService
     let reportsService: ReportsService
+    let warehouseStatsService: WarehouseStatsService
     let stockMovementService: StockMovementService
     let auditLogger: AuditLogger
     let auditLogService: AuditLogService
@@ -80,6 +81,11 @@ final class DependencyContainer {
         )
         self.stockMovementService = StockMovementService(
             movementRepository: stockMovementRepository
+        )
+        self.warehouseStatsService = WarehouseStatsService(
+            warehouseRepository: warehouseRepository,
+            inventoryService: inventoryService,
+            movementService: stockMovementService
         )
         self.dashboardService = DashboardService(
             warehouseRepository: warehouseRepository,

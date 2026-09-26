@@ -85,6 +85,15 @@ public final class WarehouseService: Sendable {
         await auditLogger.log(entityType: "Warehouse", entityID: id, action: "deactivated")
     }
 
+    public func activateWarehouse(id: UUID) async throws {
+        try accessController.require(.deactivateWarehouse)
+        var warehouse = try await getWarehouse(byID: id)
+        warehouse.isActive = true
+        warehouse.updatedAt = Date()
+        try await repository.save(warehouse)
+        await auditLogger.log(entityType: "Warehouse", entityID: id, action: "activated")
+    }
+
     public func deleteWarehouse(id: UUID) async throws {
         try accessController.require(.deleteWarehouse)
         let inventoryCount = try await inventoryService.getItemsCount(forWarehouseID: id)

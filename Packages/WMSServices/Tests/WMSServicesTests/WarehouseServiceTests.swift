@@ -89,6 +89,19 @@ final class WarehouseServiceTests: XCTestCase {
         XCTAssertFalse(repo.warehouses.first?.isActive ?? true)
     }
 
+    func testActivateWarehouse_setsIsActiveTrue() async throws {
+        let repo = MockWarehouseRepository()
+        let id = UUID()
+        var warehouse = Warehouse(id: id, name: "Test", code: "WH-001", address: "", capacity: 100)
+        warehouse.isActive = false
+        repo.warehouses = [warehouse]
+        let service = makeService(repository: repo)
+
+        try await service.activateWarehouse(id: id)
+
+        XCTAssertTrue(repo.warehouses.first?.isActive ?? false)
+    }
+
     func testDeleteWarehouse_removesFromRepo() async throws {
         let repo = MockWarehouseRepository()
         let id = UUID()

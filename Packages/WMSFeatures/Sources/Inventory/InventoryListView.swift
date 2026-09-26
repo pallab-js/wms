@@ -25,10 +25,19 @@ public struct InventoryListView: View {
     @State private var successMessage = ""
     @State private var showNoWarehouseAlert = false
     @State private var selection = Set<InventoryItem.ID>()
+    private let openItemID: UUID?
+    private let onOpenConsumed: () -> Void
 
-    public init(viewModel: InventoryListViewModel, warehouses: Binding<[Warehouse]>) {
+    public init(
+        viewModel: InventoryListViewModel,
+        warehouses: Binding<[Warehouse]>,
+        openItemID: UUID? = nil,
+        onOpenConsumed: @escaping () -> Void = {}
+    ) {
         self.viewModel = viewModel
         self._warehouses = warehouses
+        self.openItemID = openItemID
+        self.onOpenConsumed = onOpenConsumed
     }
 
     public var body: some View {
@@ -196,6 +205,18 @@ public struct InventoryListView: View {
             }
         }
         .wmsToast(isPresented: $showSuccessToast, message: successMessage)
+        .onAppear { openItemIfPossible() }
+        .onChange(of: openItemID) { openItemIfPossible() }
+        .onChange(of: viewModel.items) { openItemIfPossible() }
+    }
+
+    private func openItemIfPossible() {
+        guard let id = openItemID,
+              editingItem == nil,
+              let item = viewModel.items.first(where: { $0.id == id })
+        else { return }
+        beginEditing(item)
+        onOpenConsumed()
     }
 
     private func beginEditing(_ item: InventoryItem) {

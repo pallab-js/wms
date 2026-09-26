@@ -12,6 +12,7 @@ public struct WarehouseFormView: View {
     let onCancel: () -> Void
 
     @State private var validationErrors: [String] = []
+    @State private var hasAttemptedSave = false
 
     public var body: some View {
         VStack(spacing: 20) {
@@ -41,20 +42,33 @@ public struct WarehouseFormView: View {
             Form {
                 TextField("Warehouse Name", text: $name)
                     .overlay(alignment: .trailing) {
-                        if name.isEmpty && !validationErrors.isEmpty {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(.wmsDestructive)
-                                .font(.caption)
+                        if hasFieldError("Name") {
+                            errorIcon
                         }
                     }
                     .accessibilityLabel("Warehouse name")
                 TextField("Code (e.g. WH-001)", text: $code)
+                    .overlay(alignment: .trailing) {
+                        if hasFieldError("Code") {
+                            errorIcon
+                        }
+                    }
                     .accessibilityLabel("Warehouse code")
                 TextField("Address", text: $address)
                     .accessibilityLabel("Warehouse address")
-                TextField("Capacity (units)", text: $capacity)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Warehouse capacity in units")
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        TextField("Capacity (units)", text: $capacity)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("Warehouse capacity in units")
+                        if hasFieldError("Capacity") {
+                            errorIcon
+                        }
+                    }
+                    Text("Maximum units of stock this site can hold")
+                        .font(.wmsCaption)
+                        .foregroundColor(.wmsTextTertiary)
+                }
             }
             .formStyle(.grouped)
 
@@ -62,19 +76,19 @@ public struct WarehouseFormView: View {
                 Spacer()
                 Button("Cancel", role: .cancel) {
                     validationErrors = []
+                    hasAttemptedSave = false
                     onCancel()
                 }
                 .accessibilityLabel("Cancel warehouse form")
                 .keyboardShortcut(.escape)
                 Button("Save") {
+                    hasAttemptedSave = true
                     let result = InputValidator.validateWarehouseForm(
                         name: name, code: code, address: address, capacity: capacity
                     )
+                    validationErrors = result.errors
                     if result.isValid {
-                        validationErrors = []
                         onSave()
-                    } else {
-                        validationErrors = result.errors
                     }
                 }
                 .disabled(name.isEmpty || code.isEmpty)
@@ -83,6 +97,33 @@ public struct WarehouseFormView: View {
             }
         }
         .padding()
-        .frame(width: 400, height: 340)
+        .frame(width: 400, height: 370)
+        .onChange(of: name) { revalidateIfNeeded() }
+        .onChange(of: code) { revalidateIfNeeded() }
+        .onChange(of: address) { revalidateIfNeeded() }
+        .onChange(of: capacity) { revalidateIfNeeded() }
+    }
+
+    private var errorIcon: some View {
+        Image(systemName: "exclamationmark.circle.fill")
+            .foregroundColor(.wmsDestructive)
+            .font(.caption)
+            .padding(.trailing, 6)
+    }
+
+    private func hasFieldError(_ prefix: String) -> Bool {
+        hasAttemptedSave && validationErrors.contains { $0.hasPrefix(prefix) }
+    }
+
+    private func revalidateIfNeeded() {
+        guard hasAttemptedSave else { return }
+        revalidate()
+    }
+
+    private func revalidate() {
+        let result = InputValidator.validateWarehouseForm(
+            name: name, code: code, address: address, capacity: capacity
+        )
+        validationErrors = result.errors
     }
 }

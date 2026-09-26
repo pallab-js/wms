@@ -35,7 +35,10 @@ struct ContentView: View {
                     alertService: container.inventoryAlertService
                 ))
             case .warehouses:
-                WarehouseListContent(viewModel: WarehouseListViewModel(service: container.warehouseService))
+                WarehouseListContent(viewModel: WarehouseListViewModel(
+                    service: container.warehouseService,
+                    statsService: container.warehouseStatsService
+                ))
             case .inventory:
                 InventoryListContent(
                     viewModel: InventoryListViewModel(service: container.inventoryService),
@@ -95,28 +98,55 @@ struct ContentView: View {
 }
 
 struct WarehouseListContent: View {
+    @Environment(DependencyContainer.self) private var container
+    @Environment(AppRouter.self) private var router
     @State var viewModel: WarehouseListViewModel
 
     var body: some View {
         NavigationStack {
             WarehouseListView(viewModel: viewModel)
+                .navigationDestination(for: Warehouse.self) { warehouse in
+                    WarehouseDetailView(
+                        viewModel: WarehouseDetailViewModel(
+                            warehouse: warehouse,
+                            service: container.warehouseService,
+                            statsService: container.warehouseStatsService
+                        ),
+                        onSave: { updated in
+                            Task { await viewModel.updateWarehouse(updated) }
+                        },
+                        onChanged: {
+                            Task { await viewModel.loadWarehouses() }
+                        },
+                        onSelectItem: { itemID in
+                            router.selectedInventoryItemID = itemID
+                            router.selectedSection = .inventory
+                        }
+                    )
+                }
         }
         .task { await viewModel.loadWarehouses() }
     }
 }
 
 struct InventoryListContent: View {
+    @Environment(AppRouter.self) private var router
     @State var viewModel: InventoryListViewModel
     let warehouseService: WarehouseService
 
     @State private var warehouses: [Warehouse] = []
 
     var body: some View {
-        InventoryListView(viewModel: viewModel, warehouses: $warehouses)
-            .task {
-                warehouses = (try? await warehouseService.getAllWarehouses()) ?? []
-                await viewModel.loadItems()
-            }
+        InventoryListView(
+            viewModel: viewModel,
+            warehouses: $warehouses,
+            openItemID: router.selectedInventoryItemID,
+            onOpenConsumed: { router.selectedInventoryItemID = nil }
+        )
+        .task {
+            warehouses = (try? await warehouseService.getAllWarehouses()) ?? []
+            await viewModel.loadItems()
+        }
     }
 }
 
