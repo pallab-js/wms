@@ -183,9 +183,9 @@ public struct WarehouseDetailView: View {
             WMSStatCard(
                 title: "Inventory Value",
                 value: stats.totalValue.formatted(
-                    .currency(code: "USD").precision(.fractionLength(0))
+                    .wmsCurrency.precision(.fractionLength(0))
                 ),
-                icon: "dollarsign",
+                icon: "indianrupeesign",
                 color: .wmsAccent,
                 subtitle: "At unit cost"
             )
@@ -243,7 +243,7 @@ public struct WarehouseDetailView: View {
                         innerRatio: 0.6,
                         centerTitle: "Value",
                         centerValue: stats.totalValue.formatted(
-                            .currency(code: "USD").precision(.fractionLength(0))
+                            .wmsCurrency.precision(.fractionLength(0))
                         )
                     )
                 }

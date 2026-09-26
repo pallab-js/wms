@@ -36,8 +36,8 @@ public struct DashboardView: View {
                             )
                             WMSStatCard(
                                 title: "Inventory Value",
-                                value: data.totalInventoryValue.formatted(.currency(code: "USD")),
-                                icon: "dollarsign.circle",
+                                value: data.totalInventoryValue.formatted(.wmsCurrency),
+                                icon: "indianrupeesign.circle",
                                 color: .wmsSuccess,
                                 subtitle: "Total stock value"
                             )
@@ -212,7 +212,7 @@ public struct DashboardView: View {
                         centerTitle: "Total Value",
                         centerValue: data.warehouseSummaries
                             .reduce(0.0) { $0 + $1.totalValue }
-                            .formatted(.currency(code: "USD"))
+                            .formatted(.wmsCurrency)
                     )
                 }
                 ChartCard(title: "Warehouse Utilisation", icon: "chart.bar") {

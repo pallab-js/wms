@@ -85,7 +85,7 @@ public struct InventoryListView: View {
                     .width(70)
 
                     TableColumn("Unit Cost") { item in
-                        Text(item.unitCost, format: .currency(code: "USD"))
+                        Text(item.unitCost, format: .wmsCurrency)
                             .font(.wmsMonospace)
                     }
                     .width(80)

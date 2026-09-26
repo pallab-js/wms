@@ -31,7 +31,7 @@ public struct ReportsView: View {
                                         centerTitle: "Total Value",
                                         centerValue: data.valuationByWarehouse
                                             .reduce(0.0) { $0 + $1.totalValue }
-                                            .formatted(.currency(code: "USD"))
+                                            .formatted(.wmsCurrency)
                                     )
                                 }
                                 ChartCard(title: "Valuation by Category", icon: "chart.pie") {
@@ -274,7 +274,7 @@ public struct ReportsView: View {
                 .font(.wmsMonospaceCaption)
                 .foregroundColor(.wmsTextSecondary)
                 .frame(width: 64, alignment: .trailing)
-            Text(row.totalValue.formatted(.currency(code: "USD")))
+            Text(row.totalValue.formatted(.wmsCurrency))
                 .font(.wmsMonospaceCaption)
                 .foregroundColor(.wmsTextPrimary)
                 .frame(width: 100, alignment: .trailing)
@@ -282,7 +282,7 @@ public struct ReportsView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(row.warehouseName): \(row.skuCount) SKUs, \(row.unitCount) units, \(row.totalValue.formatted(.currency(code: "USD")))")
+        .accessibilityLabel("\(row.warehouseName): \(row.skuCount) SKUs, \(row.unitCount) units, \(row.totalValue.formatted(.wmsCurrency))")
     }
 
     private func categoryRow(_ row: CategoryValuation, maxValue: Double) -> some View {
@@ -304,7 +304,7 @@ public struct ReportsView: View {
                 .font(.wmsMonospaceCaption)
                 .foregroundColor(.wmsTextSecondary)
                 .frame(width: 64, alignment: .trailing)
-            Text(row.totalValue.formatted(.currency(code: "USD")))
+            Text(row.totalValue.formatted(.wmsCurrency))
                 .font(.wmsMonospaceCaption)
                 .foregroundColor(.wmsTextPrimary)
                 .frame(width: 100, alignment: .trailing)
@@ -312,7 +312,7 @@ public struct ReportsView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(row.category): \(row.skuCount) SKUs, \(row.unitCount) units, \(row.totalValue.formatted(.currency(code: "USD")))")
+        .accessibilityLabel("\(row.category): \(row.skuCount) SKUs, \(row.unitCount) units, \(row.totalValue.formatted(.wmsCurrency))")
     }
 
     private func movementRow(_ row: MovementSummary) -> some View {
@@ -380,7 +380,7 @@ public struct ReportsView: View {
                 .font(.wmsMonospaceCaption)
                 .foregroundColor(item.currentQuantity == 0 ? .wmsDestructive : .wmsWarning)
                 .frame(width: 72, alignment: .trailing)
-            Text(atRisk.formatted(.currency(code: "USD")))
+            Text(atRisk.formatted(.wmsCurrency))
                 .font(.wmsMonospaceCaption)
                 .foregroundColor(.wmsTextPrimary)
                 .frame(width: 100, alignment: .trailing)

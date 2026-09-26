@@ -194,9 +194,9 @@ public struct WarehouseListView: View {
             WMSStatCard(
                 title: "Inventory Value",
                 value: kpi.totalValue.formatted(
-                    .currency(code: "USD").precision(.fractionLength(0))
+                    .wmsCurrency.precision(.fractionLength(0))
                 ),
-                icon: "dollarsign",
+                icon: "indianrupeesign",
                 color: .wmsAccent,
                 subtitle: "At unit cost"
             )
@@ -260,7 +260,7 @@ public struct WarehouseRowView: View {
                             .font(.wmsMonospaceCaption)
                             .foregroundColor(utilisationColor(stats.utilisation))
                         Spacer(minLength: 8)
-                        Text(stats.totalValue, format: .currency(code: "USD").precision(.fractionLength(0)))
+                        Text(stats.totalValue, format: .wmsCurrency.precision(.fractionLength(0)))
                             .font(.wmsMonospaceCaption)
                             .foregroundColor(.wmsTextSecondary)
                     }

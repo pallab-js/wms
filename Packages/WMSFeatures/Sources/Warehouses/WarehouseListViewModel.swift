@@ -24,7 +24,7 @@ public enum WarehouseSortOrder: String, CaseIterable, Identifiable, Sendable {
         case .name: return "textformat"
         case .code: return "number"
         case .utilisation: return "gauge"
-        case .value: return "dollarsign"
+        case .value: return "indianrupeesign"
         }
     }
 }
