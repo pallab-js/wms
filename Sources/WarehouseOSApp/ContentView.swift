@@ -13,7 +13,7 @@ struct ContentView: View {
         NavigationSplitView {
             List(selection: $router.selectedSection) {
                 Section("Operations") {
-                    ForEach([AppSection.warehouses, .inventory, .employees, .transfers], id: \.self) { section in
+                    ForEach([AppSection.dashboard, .warehouses, .inventory, .employees, .transfers], id: \.self) { section in
                         Label(section.label, systemImage: section.icon)
                             .tag(section)
                     }
@@ -29,6 +29,11 @@ struct ContentView: View {
             .navigationTitle("WarehouseOS")
         } detail: {
             switch router.selectedSection {
+            case .dashboard:
+                DashboardContent(viewModel: DashboardViewModel(
+                    service: container.dashboardService,
+                    alertService: container.inventoryAlertService
+                ))
             case .warehouses:
                 WarehouseListContent(viewModel: WarehouseListViewModel(service: container.warehouseService))
             case .inventory:
@@ -44,10 +49,7 @@ struct ContentView: View {
                     warehouseService: container.warehouseService
                 )
             case .reports:
-                DashboardContent(viewModel: DashboardViewModel(
-                    service: container.dashboardService,
-                    alertService: container.inventoryAlertService
-                ))
+                ReportsContent(viewModel: ReportsViewModel(service: container.reportsService))
             case .auditLog:
                 AuditLogContent(viewModel: AuditLogViewModel(service: container.auditLogService))
             case .settings:
@@ -149,6 +151,15 @@ struct DashboardContent: View {
     var body: some View {
         DashboardView(viewModel: viewModel)
             .task { await viewModel.loadDashboard() }
+    }
+}
+
+struct ReportsContent: View {
+    @State var viewModel: ReportsViewModel
+
+    var body: some View {
+        ReportsView(viewModel: viewModel)
+            .task { await viewModel.loadReports() }
     }
 }
 

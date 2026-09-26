@@ -23,6 +23,7 @@ WMSServices (depends on WMSCore)
     ├── EmployeeService
     ├── TransferService
     ├── DashboardService
+    ├── ReportsService
     └── AuditLogger
 
 WMSFeatures (depends on WMSCore, WMSServices, WMSDesignSystem)
@@ -30,7 +31,7 @@ WMSFeatures (depends on WMSCore, WMSServices, WMSDesignSystem)
     ├── Inventory/     — Inventory management views
     ├── Employees/     — Employee management views
     ├── Transfers/     — Transfer order views
-    ├── Reports/       — Dashboard and analytics
+    ├── Reports/       — Dashboard and reports analytics
     └── Settings/      — Application settings
 
 WMSDesignSystem (zero dependencies)

@@ -15,4 +15,8 @@ public final class StockMovementService: Sendable {
     public func getMovements(forItemID itemID: UUID) async throws -> [StockMovement] {
         try await movementRepository.fetchAll(forItemID: itemID)
     }
+
+    public func getAllMovements() async throws -> [StockMovement] {
+        try await movementRepository.fetchAll(forItemID: nil)
+    }
 }

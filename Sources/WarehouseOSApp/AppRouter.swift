@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable {
+    case dashboard
     case warehouses
     case inventory
     case employees
@@ -13,6 +14,7 @@ enum AppSection: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
+        case .dashboard: return "Dashboard"
         case .warehouses: return "Warehouses"
         case .inventory: return "Inventory"
         case .employees: return "Employees"
@@ -25,6 +27,7 @@ enum AppSection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
+        case .dashboard: return "gauge"
         case .warehouses: return "building.2"
         case .inventory: return "shippingbox"
         case .employees: return "person.2"
@@ -38,7 +41,7 @@ enum AppSection: String, CaseIterable, Identifiable {
 
 @Observable
 final class AppRouter {
-    var selectedSection: AppSection? = .warehouses
+    var selectedSection: AppSection? = .dashboard
     var selectedWarehouseID: UUID?
     var selectedInventoryItemID: UUID?
     var selectedEmployeeID: UUID?

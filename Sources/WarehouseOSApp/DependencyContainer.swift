@@ -24,6 +24,7 @@ final class DependencyContainer {
     let employeeService: EmployeeService
     let transferService: TransferService
     let dashboardService: DashboardService
+    let reportsService: ReportsService
     let stockMovementService: StockMovementService
     let auditLogger: AuditLogger
     let auditLogService: AuditLogService
@@ -87,6 +88,12 @@ final class DependencyContainer {
             employeeService: employeeService,
             transferService: transferService,
             alertService: inventoryAlertService
+        )
+        self.reportsService = ReportsService(
+            warehouseRepository: warehouseRepository,
+            inventoryService: inventoryService,
+            movementService: stockMovementService,
+            transferService: transferService
         )
         self.settingsViewModel = SettingsViewModel(
             onRoleChanged: { [weak accessController, weak auditLogger] role in
