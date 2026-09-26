@@ -4,7 +4,7 @@ import WMSServices
 import WMSDesignSystem
 
 private let wmsChartPalette: [Color] = [
-    .wmsAccent, .wmsInfo, .wmsSuccess, .orange, .purple, .pink, .teal, .indigo
+    .wmsAccent, .orange, .wmsInfo, .wmsSuccess, .purple, .pink, .teal, .indigo
 ]
 
 struct ChartCard<Content: View>: View {
