@@ -11,7 +11,7 @@ Native macOS warehouse management — inventory, warehouses, employees, and tran
 - **Stock movements** — atomic stock-in, stock-out, and adjustments, each recorded in an immutable audit trail
 - **Transfer orders** — Draft → Submitted → Approved → In Transit → Completed, with stock validation and cancellation
 - **Employees** — profiles, activation state, and role-based permissions
-- **Dashboard** — KPI cards, warehouse utilisation, low-stock alerts, and recent activity at a glance
+- **Dashboard** — KPI cards, interactive charts (movement trend, value donut, utilisation bars, category pie), low-stock alerts, and recent activity at a glance
 - **Reports** — valuation by warehouse and category, movement and transfer activity, low-stock report, CSV export
 - **Filterable audit log and global search (⌘F)**
 - **Accessible** — VoiceOver labels on every control

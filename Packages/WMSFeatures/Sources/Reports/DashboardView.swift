@@ -65,6 +65,8 @@ public struct DashboardView: View {
                         }
 
                         if !data.warehouseSummaries.isEmpty {
+                            chartsGrid(data)
+
                             sectionHeader(icon: "building.2", title: "Warehouse Utilisation", count: data.warehouseSummaries.count)
                             VStack(spacing: 0) {
                                 ForEach(Array(data.warehouseSummaries.enumerated()), id: \.element.warehouse.id) { index, summary in
@@ -183,6 +185,41 @@ public struct DashboardView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 8)
+            }
+        }
+    }
+
+    private func chartsGrid(_ data: DashboardData) -> some View {
+        VStack(spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                ChartCard(title: "Stock Movement Trend", icon: "chart.line.uptrend.xyaxis") {
+                    MovementTrendChart(trend: data.movementTrend)
+                }
+                if !data.categorySummaries.isEmpty {
+                    ChartCard(title: "Inventory by Category", icon: "chart.pie") {
+                        ValuePieChart(
+                            points: data.categorySummaries.map { (label: $0.category, value: $0.totalValue) }
+                        )
+                    }
+                    .frame(width: 340)
+                }
+            }
+            HStack(alignment: .top, spacing: 14) {
+                ChartCard(title: "Inventory Value by Warehouse", icon: "chart.donut") {
+                    ValuePieChart(
+                        points: data.warehouseSummaries.map { (label: $0.warehouse.name, value: $0.totalValue) },
+                        innerRatio: 0.58,
+                        centerTitle: "Total Value",
+                        centerValue: data.warehouseSummaries
+                            .reduce(0.0) { $0 + $1.totalValue }
+                            .formatted(.currency(code: "USD"))
+                    )
+                }
+                ChartCard(title: "Warehouse Utilisation", icon: "chart.bar") {
+                    UtilisationBarChart(
+                        points: data.warehouseSummaries.map { (label: $0.warehouse.name, percent: $0.utilisation) }
+                    )
+                }
             }
         }
     }

@@ -22,6 +22,26 @@ public struct ReportsView: View {
                     VStack(alignment: .leading, spacing: 24) {
                         headerBar
 
+                        if !data.valuationByWarehouse.isEmpty {
+                            HStack(alignment: .top, spacing: 14) {
+                                ChartCard(title: "Inventory Value by Warehouse", icon: "chart.donut") {
+                                    ValuePieChart(
+                                        points: data.valuationByWarehouse.map { (label: $0.warehouseName, value: $0.totalValue) },
+                                        innerRatio: 0.58,
+                                        centerTitle: "Total Value",
+                                        centerValue: data.valuationByWarehouse
+                                            .reduce(0.0) { $0 + $1.totalValue }
+                                            .formatted(.currency(code: "USD"))
+                                    )
+                                }
+                                ChartCard(title: "Valuation by Category", icon: "chart.pie") {
+                                    ValuePieChart(
+                                        points: data.valuationByCategory.map { (label: $0.category, value: $0.totalValue) }
+                                    )
+                                }
+                            }
+                        }
+
                         sectionHeader(icon: "building.2", title: "Inventory Valuation by Warehouse", count: data.valuationByWarehouse.count)
                         card {
                             if data.valuationByWarehouse.isEmpty {
